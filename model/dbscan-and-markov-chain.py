@@ -75,11 +75,12 @@ def transition_matrix(sessions, states):
     return csr
 
 data = session_request_dict(sessions_raw)
+small_data_set = {k: data[k] for k in list(data)[:5000]}
 print('load data done')
-X = transition_matrix(data, states)
+X = transition_matrix(small_data_set, states)
 print('matrix done')
 print('start clustering')
-clustering = DBSCAN(eps=1000, min_samples=1000).fit(X)
+clustering = DBSCAN(eps=1.5, min_samples=10).fit(X)
 labels = clustering.labels_
 #print(labels)
 print(np.unique(labels, return_counts=True))

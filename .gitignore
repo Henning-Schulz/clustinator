@@ -6,3 +6,5 @@ data/
 notebook/model/\.ipynb_checkpoints/
 
 notebook/eda/\.ipynb_checkpoints/
+
+model/=1\.7\.0
