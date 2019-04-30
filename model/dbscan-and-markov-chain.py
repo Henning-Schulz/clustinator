@@ -4,7 +4,8 @@ import pandas as pd
 from sklearn import preprocessing
 from scipy.sparse import csr_matrix
 from sklearn.cluster import DBSCAN
-from sklearn import metrics
+import datetime
+import time
 
 
 states = ["INITIAL","login","View_Items","home","logout","View_Items_quantity","Add_to_Cart","shoppingcart",
@@ -33,7 +34,7 @@ def transition_matrix(sessions, states):
         # labelEncoding
         le = preprocessing.LabelEncoder()
         le.fit(value)
-        transformed_s = le.transform(value)
+        le.transform(value)
 
         # factorize
         factorize = pd.factorize(value)[0]
@@ -75,13 +76,15 @@ def transition_matrix(sessions, states):
     return csr
 
 data = session_request_dict(sessions_raw)
-small_data_set = {k: data[k] for k in list(data)[:5000]}
-print('load data done')
+small_data_set = {k: data[k] for k in list(data)[:500]}
+print('load data done', datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+#for X in tqdm(range(len(small_data_set))):
 X = transition_matrix(small_data_set, states)
-print('matrix done')
+print('matrix done', datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 print('start clustering')
 clustering = DBSCAN(eps=1.5, min_samples=10).fit(X)
 labels = clustering.labels_
 #print(labels)
 print(np.unique(labels, return_counts=True))
 print(clustering)
+print("End clustering", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
