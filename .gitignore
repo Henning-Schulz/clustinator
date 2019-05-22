@@ -8,3 +8,7 @@ notebook/model/\.ipynb_checkpoints/
 notebook/eda/\.ipynb_checkpoints/
 
 model/=1\.7\.0
+
+model/dask-worker-space/
+
+src/__pycache__/
