@@ -1,14 +1,16 @@
 
-notebook/model/\.ipynb_checkpoints/MarkovChain-checkpoint\.ipynb
+poc/notebook/model/\.ipynb_checkpoints/MarkovChain-checkpoint\.ipynb
 
-data/
+poc/data/
 
-notebook/model/\.ipynb_checkpoints/
+poc/notebook/model/\.ipynb_checkpoints/
 
-notebook/eda/\.ipynb_checkpoints/
+poc/notebook/eda/\.ipynb_checkpoints/
 
-model/=1\.7\.0
+poc/model/=1\.7\.0
 
-model/dask-worker-space/
+poc/model/dask-worker-space/
 
-src/__pycache__/
+poc/src/__pycache__/
+
+\.idea/
