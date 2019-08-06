@@ -14,3 +14,5 @@ poc/model/dask-worker-space/
 poc/src/__pycache__/
 
 \.idea/
+
+clustinator/__pycache__/
