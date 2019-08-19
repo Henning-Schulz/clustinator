@@ -1,80 +1,75 @@
 import time
 from datetime import datetime
+import numpy as np
 
 from input import Input
 from markovchain import MarkovChain
 from clustering import Clustering
 from analysis.cluster_analysis import Cluster_analysis as ca
+from producer import Producer
+from message import Message
 
+class Main:
+    def __init__(self, sessions_file):
+        self.sessions_file = sessions_file
 
-states = ["INITIAL","login","View_Items","home","logout","View_Items_quantity","Add_to_Cart","shoppingcart",
-          "remove","deferorder","purchasecart","inventory","sellinventory","clearcart","cancelorder","$"]
+    def start(self):
+        start_time = datetime.now()
+        # Input data
+        data_input = Input(self.sessions_file)
+        epsilon, min_samples = data_input.cluster_param()
+        session, states = data_input.sessions()
 
-# Data imports
-PATH = "../data/raw/"
-sessions_file = (PATH+'sessions.dat')
+        print('load data done', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
+        # Compute transition matrix next
+        markov_chain = MarkovChain(session, states)
+        markov_chain = markov_chain.csr_sparse_matrix()
 
-# main-method
+        print('matrix done', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print('start clustering')
+
+        # DBSCAN
+        dbscan = Clustering(markov_chain, epsilon, min_samples)
+        unique, counts, labels = dbscan.unique_labels()
+        print("Cluster-Infos:",unique, counts, labels)
+        print("End clustering", datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+        # Previouse data
+        #prev_markov_chains = data_input.get_prev_markov_chain()
+        try:
+            prev_markov_chains = data_input.get_prev_markov_chain()
+            first_dict = {int(k): v for k, v in prev_markov_chains.items()}
+            load_labels = np.array(first_dict.keys())
+            header = data_input.get_header()
+            app_id = data_input.get_app_id()
+
+            # Backprop
+            cluster_dict = dbscan.cluster_dict(labels, markov_chain)
+
+            second_list = dbscan.list_cluster(cluster_dict, labels, load_labels)
+
+            cluster_mean = ca(first_dict, second_list).cluster_backprob()
+
+            # Producer
+            cluster_mean = {k: v.tolist() for k, v in cluster_mean.items()}
+            message = Message(header, cluster_mean, states).build_json()
+            Producer(message, app_id)
+        except AttributeError:
+            header = data_input.get_header()
+            app_id = data_input.get_app_id()
+            cluster_dict = dbscan.cluster_dict(labels, markov_chain)
+            first_cluster = dbscan.first_cluster(cluster_dict, labels)
+
+            first_cluster = {k: v.tolist() for k, v in first_cluster.items()}
+            message = Message(header, first_cluster, states).build_json()
+            Producer(message, app_id)
+
+        end_time = datetime.now()
+        print('Duration: {}'.format(end_time - start_time))
+
 if __name__ == '__main__':
-
-    #TODO: Summary for time, reuse past clustering
-
-    start_time = datetime.now()
-    # Input data
-    input = Input(sessions_file)
-    print('load data done', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-    start, stop = 0, 1000
-    step_size = 500
-    iteration = 2
-    diff_dict = {}
-    for _ in enumerate(range(iteration)):
-        print("Iteration:", _)
-        if _ == (0, 0):
-            pass
-        else:
-            start += step_size
-            stop += step_size
-
-        # Slice sessions @sessions(None, None)
-        next_step = input.sessions(start, stop)
-
-        if _ >= (1, 1):
-            past_start = (start-step_size)
-            past_stop = (stop-step_size)
-            past_step = input.sessions(past_start, past_stop)
-
-            # Compute transition matrix next
-            mc_next = MarkovChain(next_step, states)
-            mc_next = mc_next.csr_sparse_matrix()
-
-            # Compute transition matrix past
-            mc_past = MarkovChain(past_step, states)
-            mc_past = mc_past.csr_sparse_matrix()
-
-            print('matrix done', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            print('start clustering')
-
-            # DBSCAN
-            dbscan_next = Clustering(mc_next)
-            dbscan_past = Clustering(mc_past)
-
-            print("End clustering", datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), '\n')
-            """
-            BACKPROB HERE 
-            """
-            unique_next, counts_next, labels_next = dbscan_next.unique_labels()
-            unique_past, counts_past, labels_past = dbscan_past.unique_labels()
-
-            cluster_dict_next = dbscan_next.cluster_dict(labels_next, mc_next)
-            cluster_dict_past = dbscan_past.cluster_dict(labels_past, mc_past)
-
-            first_list = dbscan_next.list_cluster(cluster_dict_next, labels_next, labels_past)
-            second_list = dbscan_past.list_cluster(cluster_dict_past, labels_next, labels_past)
-
-            cluster_mean_hist = ca(first_list, second_list).cluster_backprob()
-
-            #print(cluster_mean_hist)
-
-    end_time = datetime.now()
-    print('Duration: {}'.format(end_time - start_time))
+    # Data imports
+    PATH = "../poc/data/new_data/"
+    sessions_file = (PATH + 'clustinator-input.json')
+    Main(sessions_file).start()
