@@ -36,7 +36,8 @@ class Clustering:
         return result
 
     # Dict_Cluster
-    def cluster_dict(self, labels, X_):
+    @staticmethod
+    def cluster_dict(labels, X_):
         cluster_list = []
 
         for label in np.unique(labels):
@@ -49,7 +50,8 @@ class Clustering:
 
         return cluster_list
 
-    def list_cluster(self, cluster_dict_, labels_next, labels_past):
+    @staticmethod
+    def list_cluster(cluster_dict_, labels_next, labels_past):
         """
         TODO: was machen bei ungleich?
         :param cluster_dict_: dict of all cluster with labels
@@ -79,7 +81,8 @@ class Clustering:
 
         return cluster_list
 
-    def first_cluster(self, cluster_dict_, labels_next):
+    @staticmethod
+    def first_cluster(cluster_dict_, labels_next):
         result = {}
         cluster_list = []
 

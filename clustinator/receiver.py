@@ -15,7 +15,7 @@ class Receiver:
                            exchange='continuity.task.clustinator.cluster', routing_key='#')
 
         def callback(ch, method, properties, body):
-            print(" [x] %r%r" % (method.routing_key, body))
+            print(" [x] %r" % (method.routing_key))#, body))
             Main(body).start()
 
         channel.basic_consume(

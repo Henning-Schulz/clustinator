@@ -69,6 +69,7 @@ class MarkovChain:
         :return: csr sparse matrix for the clustering
         """
         markovchains = []
+        session_ids = []
 
         for key, value in self.sessions.items():
             encoding = self.encoding_factorize(value)
@@ -79,4 +80,6 @@ class MarkovChain:
 
             markovchains.append(transition_matrix)
 
-        return csr_matrix(markovchains)
+            session_ids.append(key)
+
+        return csr_matrix(markovchains), session_ids

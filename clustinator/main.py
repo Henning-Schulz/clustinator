@@ -24,7 +24,7 @@ class Main:
 
         # Compute transition matrix next
         markov_chain = MarkovChain(session, states)
-        markov_chain = markov_chain.csr_sparse_matrix()
+        markov_chain, session_ids = markov_chain.csr_sparse_matrix()
 
         print('matrix done', datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print('start clustering')
@@ -36,7 +36,6 @@ class Main:
         print("End clustering", datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
         # Previouse data
-        #prev_markov_chains = data_input.get_prev_markov_chain()
         try:
             prev_markov_chains = data_input.get_prev_markov_chain()
             first_dict = {int(k): v for k, v in prev_markov_chains.items()}
@@ -44,17 +43,23 @@ class Main:
             header = data_input.get_header()
             app_id = data_input.get_app_id()
 
+
             # Backprop
             cluster_dict = dbscan.cluster_dict(labels, markov_chain)
 
             second_list = dbscan.list_cluster(cluster_dict, labels, load_labels)
+            cluster_analysis = ca(first_dict, second_list)
 
-            cluster_mean = ca(first_dict, second_list).cluster_backprob()
+            cluster_mean, min_point_label_list = cluster_analysis.cluster_backprob()
 
             # Producer
             cluster_mean = {k: v.tolist() for k, v in cluster_mean.items()}
-            message = Message(header, cluster_mean, states).build_json()
+
+            session_label = ca.get_session_label(labels, session_ids, min_point_label_list)
+
+            message = Message(header, cluster_mean, states, session_label).build_json()
             Producer(message, app_id)
+
         except AttributeError:
             header = data_input.get_header()
             app_id = data_input.get_app_id()
@@ -62,11 +67,15 @@ class Main:
             first_cluster = dbscan.first_cluster(cluster_dict, labels)
 
             first_cluster = {k: v.tolist() for k, v in first_cluster.items()}
-            message = Message(header, first_cluster, states).build_json()
+            session_label = ca.get_session_label(labels, session_ids, None)
+            print("LABELS!: ",session_label)
+            message = Message(header, first_cluster, states, session_label).build_json()
+
             Producer(message, app_id)
 
         end_time = datetime.now()
         print('Duration: {}'.format(end_time - start_time))
+
 
 if __name__ == '__main__':
     # Data imports
