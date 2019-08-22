@@ -64,9 +64,8 @@ class MarkovChain:
 
     def csr_sparse_matrix(self):
         """
-        TODO: Incremental sparse matrix
         Convert the flatten markov chain into a csr sparse matrix
-        :return: csr sparse matrix for the clustering
+        :return: csr sparse matrix for the clustering and sessinID
         """
         markovchains = []
         session_ids = []

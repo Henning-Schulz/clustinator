@@ -1,5 +1,4 @@
 import pika
-import sys
 
 
 class Producer:

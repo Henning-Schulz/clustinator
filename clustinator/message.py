@@ -10,6 +10,10 @@ class Message:
         self.session_label = session_label
 
     def build_json(self):
+        """
+        Build the json-object
+        :return: A jason-dump
+        """
         self.header['mean-markov-chains'] = self.cluster_mean
         self.header['states'] = self.states
         self.header['sessions'] = self.session_label

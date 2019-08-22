@@ -43,7 +43,6 @@ class Main:
             header = data_input.get_header()
             app_id = data_input.get_app_id()
 
-
             # Backprop
             cluster_dict = dbscan.cluster_dict(labels, markov_chain)
 
@@ -64,11 +63,11 @@ class Main:
             header = data_input.get_header()
             app_id = data_input.get_app_id()
             cluster_dict = dbscan.cluster_dict(labels, markov_chain)
-            first_cluster = dbscan.first_cluster(cluster_dict, labels)
-
+            first_cluster = dbscan.list_cluster(cluster_dict, labels, None)
             first_cluster = {k: v.tolist() for k, v in first_cluster.items()}
+
             session_label = ca.get_session_label(labels, session_ids, None)
-            print("LABELS!: ",session_label)
+
             message = Message(header, first_cluster, states, session_label).build_json()
 
             Producer(message, app_id)

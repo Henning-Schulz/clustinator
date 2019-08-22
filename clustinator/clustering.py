@@ -53,21 +53,42 @@ class Clustering:
     @staticmethod
     def list_cluster(cluster_dict_, labels_next, labels_past):
         """
-        TODO: was machen bei ungleich?
-        :param cluster_dict_: dict of all cluster with labels
+        TODO: Check if the clusterlabels are equal, it's because an error can be accurse at the analysis
+        :param cluster_dict_: dict of all cluster with clusterlabels e.g. [0,1,2,...]
         :param labels_next: actuall labels
         :param labels_past: older labels
         :return: list of cluster mean markov-chains
         """
         cluster_list = []
-        if np.unique(labels_next) in labels_past:
+        result = {}
+
+        # Initial list cluster
+        if labels_past is None:
             for cluster_index, value in enumerate(np.unique(labels_next)):
                 tmp = []
                 for item in cluster_dict_:
                     for k, v in item.items():
-                        if k == cluster_index:
+                        if k == value:
                             tmp.append(v.tolist())
                 cluster_list.append(np.mean(tmp, axis=0))
+
+            for index, value in enumerate(cluster_list):
+                for value1 in np.unique(labels_next):
+                    result[str(value1)] = value
+
+            return result
+
+        # From the second pass on
+        elif np.unique(labels_next) in labels_past:
+            for cluster_index, value in enumerate(np.unique(labels_next)):
+                tmp = []
+                for item in cluster_dict_:
+                    for k, v in item.items():
+                        if k == value:
+                            tmp.append(v.tolist())
+                cluster_list.append(np.mean(tmp, axis=0))
+            return cluster_list
+
         else:
             print('Unequally Number of cluster labels. Actual cluster {actualcluster} old cluster {oldcluster}'.format(
                 actualcluster=np.unique(labels_next), oldcluster=labels_past))
@@ -75,28 +96,7 @@ class Clustering:
                 tmp = []
                 for item in cluster_dict_:
                     for k, v in item.items():
-                        if k == cluster_index:
+                        if k == value:
                             tmp.append(v.tolist())
                 cluster_list.append(np.mean(tmp, axis=0))
-
-        return cluster_list
-
-    @staticmethod
-    def first_cluster(cluster_dict_, labels_next):
-        result = {}
-        cluster_list = []
-
-        for cluster_index, value in enumerate(np.unique(labels_next)):
-            print(cluster_index, value)
-            tmp = []
-            for item in cluster_dict_:
-                for k, v in item.items():
-                    if k == value:
-                        tmp.append(v.tolist())
-            cluster_list.append(np.mean(tmp, axis=0))
-
-        for index, value in enumerate(cluster_list):
-            for value1 in np.unique(labels_next):
-                result[str(value1)] = value
-
-        return result
+            return cluster_list
