@@ -1,6 +1,6 @@
-# stream-model-generator
+# Clustinator
 
-A subproject of the ContinuITy-Project. https://github.com/ContinuITy-Project/stream-model-generator
+An incremental clustering service for [ContinuITy](https://github.com/ContinuITy-Project/ContinuITy).
 
 ## Built With
 
@@ -9,15 +9,15 @@ A subproject of the ContinuITy-Project. https://github.com/ContinuITy-Project/st
 
 ## Data
 
-The data is taken from: https://github.com/An-Dang/wessbas.behaviorModelExtractor/tree/master/examples/specj/input
+The example data is taken from: https://github.com/An-Dang/wessbas.behaviorModelExtractor/tree/master/examples/specj/input
 
 ## Authors
 
-* **Henning Schulz** - *Initial work* - [Henning-Schulz](https://github.com/Henning-Schulz)
-* **An Dang** - *Working student* - [An-Dang](https://github.com/An-Dang)
+* [An Dang](https://github.com/An-Dang)
+* [Henning Schulz](https://github.com/Henning-Schulz)
 
-See also the list of [contributors](https://github.com/ContinuITy-Project/stream-model-generator/graphs/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/ContinuITy-Project/clustinator/graphs/contributors) who participated in this project.
 
 ## License
 
-This project is licensed under License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under Apache v2 - see the [LICENSE](LICENSE) file for details.

@@ -1,3 +1,7 @@
+'''
+@author: An Dang, Henning Schulz
+'''
+
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
@@ -55,12 +59,11 @@ class MarkovChain:
         df = pd.DataFrame(data=matrix, index=value[np.sort(idx)],
                           columns=value[np.sort(idx)])
 
-        df_1 = pd.DataFrame(index=self.states, columns=self.states, dtype='float64')
+        df_1 = pd.DataFrame(index=self.states, columns=self.states, dtype='float64').assign(**{'$': 1.0})
         df_1.update(df, join='left')
+        df_1 = df_1.fillna(0)
 
-        merge = pd.concat([pd.concat([df_1, df], axis=1, sort=False)], axis=0).fillna(0).round(2).iloc[:, :-num_states]
-
-        return np.array(merge.values.flatten().tolist())
+        return np.array(df_1.values.flatten().tolist())
 
     def csr_sparse_matrix(self):
         """
@@ -71,6 +74,10 @@ class MarkovChain:
         session_ids = []
 
         for key, value in self.sessions.items():
+            # add initial and final state
+            value.insert(0, "INITIAL*")
+            value.append("$")
+            
             encoding = self.encoding_factorize(value)
 
             num_states, matrix = self.markov_chain(encoding)

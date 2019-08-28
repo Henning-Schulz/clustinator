@@ -24,3 +24,5 @@ poc/src/analysis/__pycache__/
 clustinator_v2\.0/__pycache__/
 
 clustinator_v2\.0/test\.txt
+.project
+.pydevproject

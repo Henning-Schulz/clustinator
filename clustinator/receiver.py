@@ -1,3 +1,7 @@
+'''
+@author: An Dang, Henning Schulz
+'''
+
 import pika
 from main import Main
 
@@ -15,7 +19,7 @@ class Receiver:
                            exchange='continuity.task.clustinator.cluster', routing_key='#')
 
         def callback(ch, method, properties, body):
-            print(" [x] %r" % (method.routing_key))#, body))
+            print(" [x] Received %r from %r" % (method.routing_key, queue_name))#, body))
             Main(body).start()
 
         channel.basic_consume(
