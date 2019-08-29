@@ -24,6 +24,9 @@ class Receiver:
 
         channel.basic_consume(
             queue=queue_name, on_message_callback=callback, auto_ack=True)
+        
+        print('Listening to queue %r.' % (queue_name))
+        
         channel.start_consuming()
 
 

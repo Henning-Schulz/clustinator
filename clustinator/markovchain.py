@@ -29,7 +29,7 @@ class MarkovChain:
         """
         Compute a markov chain from the session, the matrix is as big as the session.
         :param encoding_factorize: Need the factorize session
-        :return: num. of states and the probability matrix
+        :return: the probability matrix
         """
         num_states = 1 + max(encoding_factorize)
         matrix = [[0] * num_states for _ in range(num_states)]
@@ -41,15 +41,16 @@ class MarkovChain:
             s = sum(row)
             if s > 0:
                 row[:] = [f / s for f in row]
+        
+        matrix[num_states - 1][num_states - 1] = 1
 
-        return num_states, matrix
+        return matrix
 
-    def transition_matrix(self, value, matrix, num_states):
+    def transition_matrix(self, value, matrix):
         """
         Transfer the matrix into a Markov chain with implementing the states.
         :param value: values from the the raw session
         :param matrix: the compute matrix from the session
-        :param num_states: num. states from the compute matrix
         :return: return a flatten vector of the matrix
         """
         # unique array in the right order
@@ -80,9 +81,9 @@ class MarkovChain:
             
             encoding = self.encoding_factorize(value)
 
-            num_states, matrix = self.markov_chain(encoding)
+            matrix = self.markov_chain(encoding)
 
-            transition_matrix = self.transition_matrix(value, matrix, num_states)
+            transition_matrix = self.transition_matrix(value, matrix)
 
             markovchains.append(transition_matrix)
 
