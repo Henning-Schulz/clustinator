@@ -4,7 +4,7 @@
 
 import time
 from datetime import datetime
-import numpy as np
+import pika
 
 from input import Input
 from markovchain import MarkovChain
@@ -14,8 +14,10 @@ from producer import Producer
 from message import Message
 
 class Main:
-    def __init__(self, sessions_file):
+    def __init__(self, sessions_file, rabbitmq_host = 'localhost', rabbitmq_port = pika.ConnectionParameters.DEFAULT_PORT):
         self.sessions_file = sessions_file
+        self.rabbitmq_host = rabbitmq_host
+        self.rabbitmq_port = rabbitmq_port
 
     def start(self):
         start_time = datetime.now()
@@ -59,7 +61,7 @@ class Main:
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Session ID grouping done. Returning the result...')
 
         message = Message(header, cluster_means, states, clustered_sessions).build_json()
-        Producer(message, app_id)
+        Producer(message, app_id, self.rabbitmq_host, self.rabbitmq_port)
 
         end_time = datetime.now()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'done. Took', (end_time - start_time))

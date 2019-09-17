@@ -23,7 +23,7 @@ class Receiver:
 
         def callback(ch, method, properties, body):
             print(" [x] Received %r from %r" % (method.routing_key, queue_name))#, body))
-            Main(body).start()
+            Main(body, rabbitmq_host, rabbitmq_port).start()
 
         channel.basic_consume(
             queue=queue_name, on_message_callback=callback, auto_ack=True)

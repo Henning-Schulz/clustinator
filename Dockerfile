@@ -7,4 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY clustinator ./
 
-ENTRYPOINT echo "Waiting a bit for RabbitMQ..."; sleep 7; python ./receiver.py --rabbitmq=${RABBITMQ:-rabbitmq}
+RUN wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh; chmod +x wait-for-it.sh
+
+ENTRYPOINT ./wait-for-it.sh -t 120 ${RABBITMQ:-rabbitmq}:5672 -- python ./receiver.py --rabbitmq=${RABBITMQ:-rabbitmq}

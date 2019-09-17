@@ -6,9 +6,10 @@ import pika
 
 
 class Producer:
-    def __init__(self, message, app_id):
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
+    def __init__(self, message, app_id, rabbitmq_host, rabbitmq_port):
+        print('Sending results to RabbitMQ at %r:%r...' % (rabbitmq_host, rabbitmq_port))
+        
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port))
         channel = connection.channel()
         
         exchange_name = 'continuity.event.clustinator.finished'
