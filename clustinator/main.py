@@ -28,7 +28,7 @@ class Main:
         header = data_input.get_header()
         app_id = data_input.get_app_id()
 
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id)
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with epsilon', epsilon, 'and min-sample-size', min_samples)
 
         print('Creating the sparse matrices...')
         markov_chain = MarkovChain(session, states)
@@ -61,7 +61,7 @@ class Main:
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Session ID grouping done. Returning the result...')
 
         message = Message(header, cluster_means, states, clustered_sessions).build_json()
-        Producer(message, app_id, self.rabbitmq_host, self.rabbitmq_port)
+        Producer(app_id, self.rabbitmq_host, self.rabbitmq_port).send_clustering(message)
 
         end_time = datetime.now()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'done. Took', (end_time - start_time))

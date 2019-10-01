@@ -4,7 +4,6 @@
 
 from sklearn.cluster import DBSCAN
 import numpy as np
-from collections import defaultdict
 
 # Data imports
 PATH = "../data/raw/"
@@ -40,7 +39,7 @@ class Clustering:
         :return: { cluster label (str) -> mean markov chain }
         """
         
-        labels = self.dbscan.labels_
+        labels = np.unique(self.dbscan.labels_)
         cluster_mean_dict = {}
         
         for label in labels:
