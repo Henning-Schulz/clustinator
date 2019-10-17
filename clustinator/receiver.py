@@ -59,7 +59,7 @@ class Receiver:
                 'continuity.task.clustinator.knndistance',
                 knn_queue, knn_distance_callback)
             
-            print('RabbitMQ connection established.')
+            print('RabbitMQ connection established.', flush=True)
         
             try:
                 channel.start_consuming()
@@ -88,7 +88,7 @@ class Receiver:
 
         self.channel.basic_consume(queue=queue_name, on_message_callback=callback)#, auto_ack=True)
         
-        print('Listening to queue %r.' % queue_name, flush=True)
+        print('Listening to queue %r.' % queue_name)
 
 
 if __name__ == '__main__':

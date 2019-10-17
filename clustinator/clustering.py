@@ -39,10 +39,10 @@ class Clustering:
         :return: { cluster label (str) -> mean markov chain }
         """
         
-        labels = np.unique(self.dbscan.labels_)
+        labels = self.dbscan.labels_
         cluster_mean_dict = {}
         
-        for label in labels:
+        for label in np.unique(labels):
             chains_with_label = self.X[labels == label]
             mean_chain = sum(chains_with_label) / chains_with_label.shape[0]
             cluster_mean_dict[str(label)] = mean_chain.toarray()[0].tolist()
