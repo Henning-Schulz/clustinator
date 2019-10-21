@@ -7,11 +7,15 @@ from datetime import datetime
 import pika
 
 from input import Input
-from markovchain import MarkovChain
+from session_matrix import SessionMatrix
+from session_matrix_creator import SessionMatrixCreator
 from clustering import Clustering
 from analysis.cluster_analysis import Cluster_analysis as ca
 from producer import Producer
 from message import Message
+from clustinator.behavior_model import BehaviorModel
+from elastic_connection import ElasticConnection
+from thinktime_matrix import ThinktimeMatrix
 
 class Main:
     def __init__(self, sessions_file, rabbitmq_host = 'localhost', rabbitmq_port = pika.ConnectionParameters.DEFAULT_PORT):
@@ -23,20 +27,25 @@ class Main:
         start_time = datetime.now()
 
         data_input = Input(self.sessions_file)
-        epsilon, min_samples = data_input.cluster_param()
-        session, states = data_input.sessions()
+        avg_tolerance, min_samples = data_input.cluster_param()
         header = data_input.get_header()
         app_id = data_input.get_app_id()
+        tailoring = data_input.get_tailoring()
+        start_micros, interval_start_micros, end_micros = data_input.get_range_micros()
 
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with epsilon', epsilon, 'and min-sample-size', min_samples)
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with avg. transition tolerance', avg_tolerance, 'and min-sample-size', min_samples)
 
         print('Creating the sparse matrices...')
-        markov_chain = MarkovChain(session, states)
-        markov_chain, session_ids = markov_chain.csr_sparse_matrix()
+        matrix_creator = SessionMatrixCreator(app_id, tailoring, start_micros, end_micros)
+        matrix = matrix_creator.create()
+        
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Converting to CSR...')
+        csr_matrix = matrix.as_csr_matrix()
+        epsilon = (len(matrix.states()) - 1) * avg_tolerance
 
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done. Starting the clustering...')
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done. Starting the clustering with epsilon', epsilon, '...')
 
-        dbscan = Clustering(markov_chain, epsilon, min_samples)
+        dbscan = Clustering(csr_matrix, epsilon, min_samples)
         unique, counts, labels = dbscan.label_summary()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering done. Found the following clusters:', unique, 'with counts:', counts)
         
@@ -44,23 +53,33 @@ class Main:
         cluster_means = dbscan.cluster_means()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation done. Grouping the session IDs by cluster label...')
         
-        prev_markov_chains = data_input.get_prev_markov_chain()
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
+        prev_behavior_model = BehaviorModel(matrix.label_encoder, app_id, tailoring, interval_start_micros)
+        prev_behavior_model.load_json()
+        prev_markov_chains = prev_behavior_model.as_1d_dict()
         
         if prev_markov_chains == None:
-            print('There are no previous markov chains.')
-            clustered_sessions = ca.sessions_per_cluster(labels, session_ids, None)
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'There are no previous markov chains.')
+            clustered_sessions = ca.sessions_per_cluster(labels, matrix.session_ids, None)
         else:
-            print('Mapping to the previous markov chains...')
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mapping to the previous markov chains...')
             cluster_analysis = ca(prev_markov_chains, cluster_means)
             cluster_mapping = cluster_analysis.cluster_mapping()
             cluster_means = cluster_analysis.relabel_clusters(cluster_mapping)
             print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Calculated mapping:', cluster_mapping)
             
-            clustered_sessions = ca.sessions_per_cluster(labels, session_ids, cluster_mapping)
+            clustered_sessions = ca.sessions_per_cluster(labels, matrix.session_ids, cluster_mapping)
         
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Session ID grouping done. Returning the result...')
+        matrix_creator.update_group_ids(clustered_sessions)
+        
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Session ID grouping done. Calculating the think times...')
+        
+        thinktime_matrix = ThinktimeMatrix(app_id, tailoring, start_micros, end_micros, matrix.label_encoder)
+        
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Think time calculation done. Returning the result...')
 
-        message = Message(header, cluster_means, states, clustered_sessions).build_json()
+        frequency = { beh_id: len(s) / len(matrix.session_ids) for beh_id, s in clustered_sessions.items() }
+        message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(), thinktime_matrix.variance_1d_dict(), frequency).build_json()
         Producer(app_id, self.rabbitmq_host, self.rabbitmq_port).send_clustering(message)
 
         end_time = datetime.now()
@@ -68,7 +87,6 @@ class Main:
 
 
 if __name__ == '__main__':
-    # Data imports
-    PATH = "../poc/data/new_data/"
-    sessions_file = (PATH + 'clustinator-input.json')
-    Main(sessions_file).start()
+    ElasticConnection.init('localhost')
+    sessions_file = open('../poc/data/sis-input.json')
+    Main(sessions_file.read()).start()

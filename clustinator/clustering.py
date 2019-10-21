@@ -45,6 +45,7 @@ class Clustering:
         for label in np.unique(labels):
             chains_with_label = self.X[labels == label]
             mean_chain = sum(chains_with_label) / chains_with_label.shape[0]
+            # TODO: normalize rows to 1 (if a session misses an endpoint, that row will be 0 --> mean can be less than 1)
             cluster_mean_dict[str(label)] = mean_chain.toarray()[0].tolist()
         
         return cluster_mean_dict

@@ -6,16 +6,20 @@ import pika
 import argparse
 import threading
 import functools
+from _warnings import warn
+from pika.exceptions import StreamLostError, ChannelWrongStateError
+
 from main import Main
 from producer import Producer
 from analysis.kneighbors import KNeighbors
-from _warnings import warn
-from pika.exceptions import StreamLostError, ChannelWrongStateError
-from time import sleep
+from elastic_connection import ElasticConnection
 
 
 class Receiver:
-    def __init__(self, rabbitmq_host, rabbitmq_port, timeout):
+    def __init__(self, rabbitmq_host, rabbitmq_port, elastic_host, timeout):
+        print('Connecting to Elasticsearch at %r.' % elastic_host)
+        ElasticConnection.init(elastic_host)
+        
         print('Connecting to RabbitMQ at %r:%r...' % (rabbitmq_host, rabbitmq_port))
         
         while True:
@@ -97,8 +101,10 @@ if __name__ == '__main__':
                    help='The host name or IP of the RabbitMQ server')
     parser.add_argument('--rabbitmq-port', nargs='?', type=int, default=pika.ConnectionParameters.DEFAULT_PORT,
                    help='The port number of the RabbitMQ server')
+    parser.add_argument('--elastic', nargs='?', default='localhost',
+                   help='The host name or IP of the elasticsearch server')
     parser.add_argument('--timeout', nargs='?', type=int, default=pika.ConnectionParameters.DEFAULT_HEARTBEAT_TIMEOUT,
                    help='The timeout in seconds after which the RabbitMQ connection is treated to be dead.')
     args = parser.parse_args()
     
-    Receiver(args.rabbitmq, args.rabbitmq_port, args.timeout)
+    Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout)
