@@ -190,7 +190,7 @@ class ElasticBehaviorConnection(ElasticConnection):
                 },
                 "sort": [
                     {
-                        "timestamp": { "order": "asc" }
+                        "timestamp": { "order": "desc" }
                     }
                 ]
             }

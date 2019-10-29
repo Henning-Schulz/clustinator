@@ -43,7 +43,14 @@ class Cluster_analysis:
         unmapped = [label for label in self.new_means if label not in new_mapped]
         
         for label in unmapped:
-            mapping[label] = label
+            new_label = int(label)
+            int_labels = [ int(x) for x in mapping.values() ]
+            
+            while new_label in int_labels:
+                new_label += (1 if new_label >= 0 else -1)
+            
+            print('  mapping (new %r -> new %r)' % (label, new_label))
+            mapping[label] = str(new_label)
         
         return mapping
     
