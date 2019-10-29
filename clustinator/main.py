@@ -13,7 +13,7 @@ from clustering import Clustering
 from analysis.cluster_analysis import Cluster_analysis as ca
 from producer import Producer
 from message import Message
-from clustinator.behavior_model import BehaviorModel
+from behavior_model import BehaviorModel
 from elastic_connection import ElasticConnection
 from thinktime_matrix import ThinktimeMatrix
 
