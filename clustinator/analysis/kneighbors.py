@@ -7,6 +7,7 @@ from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
 import time
 from datetime import datetime
+import numpy as np
 
 from input import Input
 from session_matrix import SessionMatrix
@@ -34,18 +35,33 @@ class KNeighbors:
         csr_matrix = matrix.as_csr_matrix()
         
         _, min_samples = data_input.cluster_param()
+        num_sessions = csr_matrix.get_shape()[0]
+        
+        if min_samples > num_sessions:
+            print('Using min sample size %d (number of sessions) instead of %d (configured).' % (num_sessions, min_samples))
+            min_samples = num_sessions
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Calculating the distances...')
         
-        nbrs = NearestNeighbors(n_neighbors=min_samples*10).fit(csr_matrix)
-        distances, _ = nbrs.kneighbors(csr_matrix)
+        self.ks = tuple(filter(lambda x : x <= num_sessions, ( min_samples//10, min_samples//2, min_samples, min_samples*2, min_samples*10 )))
+        self.styles = ( '--c', '-c', '-b', '-k', '--k' )[:len(self.ks)]
+        self.linewidths = ( 0.7, 0.7, 1.2, 0.7, 0.7 )[:len(self.ks)]
+        self.distances = { k: [] for k in self.ks }
         
-        self.min_samples = min_samples
-        self.distances = sorted(distances[:,min_samples-1])
-        self.distances_by_2 = sorted(distances[:,min_samples//2-1])
-        self.distances_by_10 = sorted(distances[:,min_samples//10-1])
-        self.distances_times_2 = sorted(distances[:,min_samples*2-1])
-        self.distances_times_10 = sorted(distances[:,min_samples*10-1])
+        nbrs = NearestNeighbors(n_neighbors=max(self.ks)).fit(csr_matrix)
+        print_steps = [ int(round(s)) for s in np.linspace(0, num_sessions-1, num = 11) ]
+        
+        for i in range(num_sessions):
+            distances, _ = nbrs.kneighbors(csr_matrix.getrow(i))
+            
+            for k in self.ks:
+                self.distances[k].append(distances[0,k-1])
+            
+            if i in print_steps:
+                print('progress: %d%%' % round(i / num_sessions * 100))
+        
+        print('')
+        
         self.n = len(matrix.states()) - 1
         self.title = data_input.get_app_id()
     
@@ -62,12 +78,10 @@ class KNeighbors:
         
         ax.set_title(self.title)
         
-        ax.plot(self.distances_by_10, '--c', label = '%r-dist' % (self.min_samples//10), linewidth = 0.7)
-        ax.plot(self.distances_by_2, '-c', label = '%r-dist' % (self.min_samples//2), linewidth = 0.7)
-        ax.plot(self.distances, '-b', label = '%r-dist' % self.min_samples, linewidth = 1.2)
-        ax.plot(self.distances_times_2, '-k', label = '%r-dist' % (self.min_samples*2), linewidth = 0.7)
-        ax.plot(self.distances_times_10, '--k', label = '%r-dist' % (self.min_samples*10), linewidth = 0.7)
-        ax.set_ylabel('dist')
+        for k, style, width in zip(self.ks, self.styles, self.linewidths):
+            ax.plot(sorted(self.distances[k]), style, label = '%r-dist' % k, linewidth = width)
+        
+        ax.set_ylabel('knn dist')
         ax.legend(loc='upper left')
         
         def eps2att(x):
