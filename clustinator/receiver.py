@@ -26,6 +26,7 @@ class Receiver:
         
             connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port, heartbeat=timeout))
             channel = connection.channel()
+            channel.basic_qos(prefetch_count = 1) # receive at most 1 unacked message at a time
             self.channel = channel
             
             clustering_queue = 'continuity.clustinator.task.clustinator.cluster'

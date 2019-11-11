@@ -31,11 +31,18 @@ class SessionMatrixCreator:
         
         return matrix
     
-    def update_group_ids(self, sessions_per_cluster):
+    def update_group_ids(self, sessions_per_cluster, chunk_size = 2000):
         """
         Updates the group IDs of the sessions as specified in the passed dict.
         :param sessions_per_cluster: Dict of session IDs per group (cluster) ID.
+        :param chunk_size: The number of sessions to update with one request. Defaults to 2000.
         """
         
         for beh_id, session_ids in sessions_per_cluster.items():
-            self._elastic.set_group_ids(beh_id, session_ids)
+            
+            for chunk in [
+                session_ids[i * chunk_size:(i + 1) * chunk_size]
+                for i in range((len(session_ids) + chunk_size - 1) // chunk_size )
+                ]:
+                
+                self._elastic.set_group_ids(beh_id, chunk)
