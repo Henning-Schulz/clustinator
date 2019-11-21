@@ -14,7 +14,7 @@ class SessionMatrixCreator:
         self._elastic = ElasticSessionConnection(app_id, tailoring, from_micros, to_micros)
         self.collect_session_ids = collect_session_ids
         
-    def create(self):
+    def create(self, extra_endpoints = None):
         """
         Creates and returns the session matrix from the sessions stored in the elasticsearch.
         :return: The created SessionMatrix
@@ -23,6 +23,10 @@ class SessionMatrixCreator:
         print('%s Creating session matrix...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
         
         endpoints = self._elastic.get_unique_endpoints()
+        
+        if extra_endpoints is not None:
+            endpoints = list(set(endpoints + extra_endpoints))
+        
         matrix = SessionMatrix(endpoints, collect_session_ids = self.collect_session_ids)
         
         self._elastic.scroll_for_sessions(matrix.append_sessions)

@@ -34,10 +34,18 @@ class Main:
         start_micros, interval_start_micros, end_micros = data_input.get_range_micros()
 
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with avg. transition tolerance', avg_tolerance, 'and min-sample-size', min_samples)
+        
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
+        prev_behavior_model = BehaviorModel(app_id, tailoring, interval_start_micros)
+        
+        if prev_behavior_model.json is None:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'There are no previous Markov chains.')
+        else:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Found and loaded previous Markov chains.')
 
         print('Creating the sparse matrices...')
         matrix_creator = SessionMatrixCreator(app_id, tailoring, start_micros, end_micros)
-        matrix = matrix_creator.create()
+        matrix = matrix_creator.create(prev_behavior_model.get_endpoints())
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Converting to CSR...')
         csr_matrix = matrix.as_csr_matrix()
@@ -53,16 +61,12 @@ class Main:
         cluster_means = dbscan.cluster_means()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation done. Grouping the session IDs by cluster label...')
         
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
-        prev_behavior_model = BehaviorModel(matrix.label_encoder, app_id, tailoring, interval_start_micros)
-        prev_behavior_model.load_json()
-        prev_markov_chains = prev_behavior_model.as_1d_dict()
+        prev_markov_chains = prev_behavior_model.as_1d_dict(matrix.label_encoder)
         
         if prev_markov_chains == None:
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'There are no previous markov chains.')
             clustered_sessions = ca.sessions_per_cluster(labels, matrix.session_ids, None)
         else:
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mapping to the previous markov chains...')
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mapping to the previous Markov chains...')
             cluster_analysis = ca(prev_markov_chains, cluster_means)
             cluster_mapping = cluster_analysis.cluster_mapping()
             cluster_means = cluster_analysis.relabel_clusters(cluster_mapping)
