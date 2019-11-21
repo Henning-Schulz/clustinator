@@ -11,7 +11,7 @@ class Input:
         self.data = json.loads(sessions_json)
 
     def cluster_param(self):
-        return self.data['avg-transition-tolerance'], self.data['min-sample-size']
+        return self.data.get('avg-transition-tolerance'), self.data.get('epsilon'), self.data['min-sample-size']
 
     def get_header(self):
         header_dict = {}

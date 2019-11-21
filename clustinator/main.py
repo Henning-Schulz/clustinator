@@ -27,13 +27,16 @@ class Main:
         start_time = datetime.now()
 
         data_input = Input(self.sessions_file)
-        avg_tolerance, min_samples = data_input.cluster_param()
+        avg_tolerance, epsilon, min_samples = data_input.cluster_param()
         header = data_input.get_header()
         app_id = data_input.get_app_id()
         tailoring = data_input.get_tailoring()
         start_micros, interval_start_micros, end_micros = data_input.get_range_micros()
 
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with avg. transition tolerance', avg_tolerance, 'and min-sample-size', min_samples)
+        if epsilon is None:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with avg. transition tolerance', avg_tolerance, 'and min-sample-size', min_samples)
+        else:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with epsilon', epsilon, 'and min-sample-size', min_samples)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
         prev_behavior_model = BehaviorModel(app_id, tailoring, interval_start_micros)
@@ -49,7 +52,9 @@ class Main:
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Converting to CSR...')
         csr_matrix = matrix.as_csr_matrix()
-        epsilon = (len(matrix.states()) - 1) * avg_tolerance
+        
+        if epsilon is None:
+            epsilon = (len(matrix.states()) - 1) * avg_tolerance
 
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done. Starting the clustering with epsilon', epsilon, '...')
 
