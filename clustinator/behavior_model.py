@@ -6,8 +6,8 @@ from elastic_connection import ElasticBehaviorConnection
 
 class BehaviorModel:
     
-    def __init__(self, app_id, tailoring, interval_start):
-        self.json = ElasticBehaviorConnection(app_id, tailoring, interval_start).get_latest()
+    def __init__(self, json):
+        self.json = json
     
     def get_endpoints(self):
         """
@@ -23,7 +23,7 @@ class BehaviorModel:
                     if from_state not in [ '$', 'INITIAL*' ]:
                         states.add(from_state)
         
-        return list(states)
+        return states
     
     def _load_chain(self, json, label_encoder):
         num_states = len(label_encoder.classes_)
@@ -45,7 +45,7 @@ class BehaviorModel:
         The order of the Markov states corresponds to the label encoder.
         The keys are the Markov chain IDs (string).
         :param label_encoder: Label encoder to use for getting the index per state.
-        :return: A dict { 'markov chain id' -> [1d array] }
+        :return: A dict { 'markov chain id' -> [1d array (list)] }
         """
         
         if self.json is None:

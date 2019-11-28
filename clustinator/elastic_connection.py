@@ -129,7 +129,7 @@ class ElasticSessionConnection(ElasticConnection):
         :param session_ids: The IDs of the sessions to be tagged with the group-id as list.
         """
         
-        print('%s Updating the group-id of the sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.index))
+        print('%s Updating the group-id %r of the sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), group_id, self.index))
         
         response = ElasticConnection._es.update_by_query(
             index = self.index,
@@ -164,22 +164,23 @@ class ElasticBehaviorConnection(ElasticConnection):
         self.index = '%s.%s.behavior' % (app_id, tailoring)
         self.before_micros = before_micros
     
-    def get_latest(self):
+    def get_latest(self, n = 1):
         """
-        Searches for the latest behavior model before the specified date.
+        Searches for the latest n behavior model before the specified date.
+        :param n: Number of behavior models to be returned at most. Defaults to 1.
         :return: The latest behavior model or None, if there is none.
         """
         
         if not ElasticConnection._es.indices.exists(index=self.index):
             print('Index ' + self.index + ' not exists')
-            return None
+            return []
         
         print('%s Getting the latest behavior model in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), self.index))
         
         response = ElasticConnection._es.search(
             index = self.index,
             body = {
-                "size": 1,
+                "size": n,
                 "query": {
                     "range": {
                         "timestamp": {
@@ -199,11 +200,11 @@ class ElasticBehaviorConnection(ElasticConnection):
         hits = response['hits']['hits']
         
         if len(hits) == 0:
-            print('%s Could not find a behavior model.' % datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            return None
+            print('%s Could not find any behavior models.' % datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            return []
         else:
-            print('%s Returning the latest behavior model.' % datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            return hits[0]['_source']
+            print('%s Returning the %d latest behavior model.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), len(hits)))
+            return [ d['_source'] for d in hits]
         
         
 

@@ -48,6 +48,10 @@ class ThinktimeMatrix:
             
             for (from_idx, to_idx, think_start, think_end) in zip(indices, indices[1:], end_micros, start_micros[1:]):
                 self._add_thinktime(group_id, from_idx, to_idx, think_end - think_start)
+            
+            # if there is only one state
+            if len(indices) == 1:
+                self._add_thinktime(group_id, indices[0], indices[0], 0)
     
     def _thinktime_mean(self, thinktimes):
         if len(thinktimes) == 0:

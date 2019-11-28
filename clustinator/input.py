@@ -35,3 +35,6 @@ class Input:
     def get_range_micros(self):
         return self.data['start-micros'], self.data['interval-start-micros'], self.data['end-micros']
     
+    def get_lookback(self):
+        return self.data['lookback']
+    
