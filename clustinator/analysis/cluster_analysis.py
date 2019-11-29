@@ -106,6 +106,7 @@ class Cluster_analysis:
             
             print('  mapping (new %r -> new %r)' % (label, new_label))
             mapping[label] = str(new_label)
+            int_labels.append(new_label)
         
         return mapping
     
