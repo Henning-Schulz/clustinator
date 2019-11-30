@@ -16,9 +16,9 @@ from elastic_connection import ElasticConnection
 
 
 class Receiver:
-    def __init__(self, rabbitmq_host, rabbitmq_port, elastic_host, timeout):
-        print('Connecting to Elasticsearch at %r.' % elastic_host)
-        ElasticConnection.init(elastic_host)
+    def __init__(self, rabbitmq_host, rabbitmq_port, elastic_host, timeout, elastic_timeout):
+        print('Connecting to Elasticsearch at %r with a read timeout of %d seconds.' % (elastic_host, elastic_timeout))
+        ElasticConnection.init(elastic_host, elastic_timeout)
         
         print('Connecting to RabbitMQ at %r:%r...' % (rabbitmq_host, rabbitmq_port))
         
@@ -106,6 +106,8 @@ if __name__ == '__main__':
                    help='The host name or IP of the elasticsearch server')
     parser.add_argument('--timeout', nargs='?', type=int, default=pika.ConnectionParameters.DEFAULT_HEARTBEAT_TIMEOUT,
                    help='The timeout in seconds after which the RabbitMQ connection is treated to be dead.')
+    parser.add_argument('--elastic-timeout', nargs='?', type=int, default=10,
+                   help='The timeout in seconds to wait for an Elasticsearch request.')
     args = parser.parse_args()
     
-    Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout)
+    Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout, args.elastic_timeout)

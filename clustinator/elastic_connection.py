@@ -11,8 +11,8 @@ class ElasticConnection:
     _es = None
     
     @staticmethod
-    def init(host):
-        ElasticConnection._es = Elasticsearch(host)
+    def init(host, timeout=10):
+        ElasticConnection._es = Elasticsearch(host, timeout=timeout)
 
 
 class ElasticSessionConnection(ElasticConnection):
