@@ -5,11 +5,11 @@
 import time
 from datetime import datetime
 import pika
+import numpy as np
 
 from input import Input
 from session_matrix import SessionMatrix
 from session_matrix_creator import SessionMatrixCreator
-from clustering import Clustering
 from analysis.cluster_analysis import Cluster_analysis as ca
 from producer import Producer
 from message import Message
@@ -17,6 +17,9 @@ from behavior_model import BehaviorModel
 from behavior_model_creator import BehaviorModelCreator
 from elastic_connection import ElasticConnection
 from thinktime_matrix import ThinktimeMatrix
+from dbscan_appender import DbscanAppender
+from kmeans_appender import KmeansAppender
+from minimum_distance_appender import MinimumDistanceAppender
 
 class Main:
     def __init__(self, sessions_file, rabbitmq_host = 'localhost', rabbitmq_port = pika.ConnectionParameters.DEFAULT_PORT):
@@ -28,17 +31,18 @@ class Main:
         start_time = datetime.now()
 
         data_input = Input(self.sessions_file)
-        avg_tolerance, epsilon, min_samples = data_input.cluster_param()
+        avg_tolerance, epsilon, min_samples = data_input.dbscan_param()
+        k, n_jobs = data_input.kmeans_param()
         header = data_input.get_header()
         app_id = data_input.get_app_id()
         tailoring = data_input.get_tailoring()
         start_micros, interval_start_micros, end_micros = data_input.get_range_micros()
         lookback = data_input.get_lookback()
+        append_strategy = data_input.get_append_strategy()
 
-        if epsilon is None:
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with avg. transition tolerance', avg_tolerance, 'and min-sample-size', min_samples)
-        else:
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'with epsilon', epsilon, 'and min-sample-size', min_samples)
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'using', append_strategy,
+              'with the following parameters: epsilon =', epsilon, ' avg_tolerance =', avg_tolerance, ' min-sample-size =', min_samples, ' k =', k, ' n_jobs =', n_jobs)
+        print('Clustering range is', start_micros, '-', interval_start_micros, '-', end_micros)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
         prev_behavior_models = BehaviorModelCreator(app_id, tailoring, interval_start_micros).load(lookback)
@@ -55,31 +59,24 @@ class Main:
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Converting to CSR...')
         csr_matrix = matrix.as_csr_matrix()
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done.')
         
-        if epsilon is None:
-            epsilon = (len(matrix.states()) - 1) * avg_tolerance
-
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done. Starting the clustering with epsilon', epsilon, '...')
-
-        dbscan = Clustering(csr_matrix, epsilon, min_samples)
-        unique, counts, labels = dbscan.label_summary()
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering done. Found the following clusters:', unique, 'with counts:', counts)
+        appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
+                     'kmeans': KmeansAppender(k, n_jobs, prev_behavior_models),
+                     'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder)}
         
-        print("Calculating the cluster means...")
-        cluster_means = dbscan.cluster_means()
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation done. Grouping the session IDs by cluster label...')
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending the new sessions using', append_strategy)
         
-        if not prev_behavior_models:
-            cluster_mapping = None
-        else:
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mapping to the previous Markov chains...')
-            cluster_analysis = ca(prev_behavior_models, cluster_means, counts, matrix.label_encoder)
-            cluster_mapping = cluster_analysis.cluster_mapping(epsilon)
-            cluster_means = cluster_analysis.relabel_clusters(cluster_mapping)
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Calculated mapping:', cluster_mapping)
+        appender = appenders[append_strategy]
+        appender.append(csr_matrix)
+        cluster_means = appender.cluster_means
+        labels = appender.labels
+        cluster_mapping = appender.cluster_mapping
+        num_sessions = appender.num_sessions
+        
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending done. Grouping the session IDs...')
             
         clustered_sessions = ca.sessions_per_cluster(labels, matrix.session_ids, cluster_mapping)
-        
         matrix_creator.update_group_ids(clustered_sessions)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Session ID grouping done. Calculating the think times...')
@@ -88,8 +85,9 @@ class Main:
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Think time calculation done. Returning the result...')
 
-        frequency = { beh_id: len(s) / len(matrix.session_ids) for beh_id, s in clustered_sessions.items() }
-        message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(), thinktime_matrix.variance_1d_dict(), frequency).build_json()
+        total_num_sessions = np.sum([ count for _, count in num_sessions.items() ])
+        frequency = { beh_id: count / total_num_sessions for beh_id, count in num_sessions.items() }
+        message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(), thinktime_matrix.variance_1d_dict(), frequency, num_sessions).build_json()
         Producer(app_id, self.rabbitmq_host, self.rabbitmq_port).send_clustering(message)
 
         end_time = datetime.now()

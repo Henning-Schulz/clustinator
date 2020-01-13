@@ -10,13 +10,16 @@ class Input:
     def __init__(self, sessions_json):
         self.data = json.loads(sessions_json)
 
-    def cluster_param(self):
-        return self.data.get('avg-transition-tolerance'), self.data.get('epsilon'), self.data['min-sample-size']
+    def dbscan_param(self):
+        return self.data.get('avg-transition-tolerance'), self.data.get('epsilon'), self.data.get('min-sample-size')
+    
+    def kmeans_param(self):
+        return self.data.get('k'), self.data.get('parallelize')
 
     def get_header(self):
         header_dict = {}
-        header_list = ['app-id', 'version', 'tailoring', 'start-micros',
-                       'interval-start-micros', 'end-micros']
+        header_list = ['app-id', 'version', 'tailoring', 'append-strategy',
+                       'start-micros', 'interval-start-micros', 'end-micros']
         for header in header_list:
             for k, v in self.data.items():
                 if k == header:
@@ -37,4 +40,7 @@ class Input:
     
     def get_lookback(self):
         return self.data['lookback']
+    
+    def get_append_strategy(self):
+        return self.data['append-strategy']
     

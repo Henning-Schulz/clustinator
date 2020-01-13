@@ -128,7 +128,7 @@ class Cluster_analysis:
         index_offset = 1 if '-1' in self.new_means else 0
         
         for key, value in self.new_means.items():
-            count = self.cluster_counts[int(key) - index_offset]
+            count = self.cluster_counts[int(key) + index_offset]
             remapped_clusters[cluster_mapping_dict[key]].append((value, count))
         
         return { key : self._merge_means(value, key) for (key, value) in remapped_clusters.items() }

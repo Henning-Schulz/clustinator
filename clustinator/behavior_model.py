@@ -25,6 +25,21 @@ class BehaviorModel:
         
         return states
     
+    def get_num_sessions(self):
+        """
+        Extract and gets the number of sessions per group.
+        :return: A dict { 'markov chain id' -> num_sessions }
+        """
+        
+        num_sessions = dict()
+        
+        if self.json is not None:
+            for markov_chain in self.json['markov-chains']:
+                num_sessions[markov_chain['id']] = markov_chain['num-sessions']
+        
+        return num_sessions
+        
+    
     def _load_chain(self, json, label_encoder):
         num_states = len(label_encoder.classes_)
         transitions = json['transitions']
