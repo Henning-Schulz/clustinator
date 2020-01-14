@@ -13,12 +13,20 @@ from main import Main
 from producer import Producer
 from analysis.kneighbors import KNeighbors
 from elastic_connection import ElasticConnection
+from session_matrix_buffer import SessionMatrixBuffer
+from session_matrix_buffer import session_matrix_buffer_noop
 
 
 class Receiver:
-    def __init__(self, rabbitmq_host, rabbitmq_port, elastic_host, timeout, elastic_timeout):
+    def __init__(self, rabbitmq_host, rabbitmq_port, elastic_host, timeout, elastic_timeout, sessions_buffer, fast_test):
         print('Connecting to Elasticsearch at %r with a read timeout of %d seconds.' % (elastic_host, elastic_timeout))
         ElasticConnection.init(elastic_host, elastic_timeout)
+        
+        if sessions_buffer:
+            print('Initializing the session matrix buffer at %r' % sessions_buffer)
+            matrix_buffer = SessionMatrixBuffer(sessions_buffer)
+        else:
+            matrix_buffer = session_matrix_buffer_noop
         
         print('Connecting to RabbitMQ at %r:%r...' % (rabbitmq_host, rabbitmq_port))
         
@@ -34,7 +42,7 @@ class Receiver:
             threads = []
             
             def clustering_work(method, body):
-                Main(body, rabbitmq_host, rabbitmq_port).start()
+                Main(body, rabbitmq_host, rabbitmq_port, matrix_buffer, fast_test).start()
                 connection.add_callback_threadsafe(functools.partial(channel.basic_ack, method.delivery_tag))
             
             def clustering_callback(ch, method, properties, body):
@@ -108,6 +116,10 @@ if __name__ == '__main__':
                    help='The timeout in seconds after which the RabbitMQ connection is treated to be dead.')
     parser.add_argument('--elastic-timeout', nargs='?', type=int, default=10,
                    help='The timeout in seconds to wait for an Elasticsearch request.')
+    parser.add_argument('--sessions-buffer', nargs='?', default=None,
+                   help='A file path to a session matrix buffer. None means not buffering the matrices.')
+    parser.add_argument('--fast-test', nargs='?', type=bool, default=False,
+                   help='Set to true to do a fast test run without think time calculation. DO NOT USE IN PRODUCTION!')
     args = parser.parse_args()
     
-    Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout, args.elastic_timeout)
+    Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout, args.elastic_timeout, args.sessions_buffer, args.fast_test)

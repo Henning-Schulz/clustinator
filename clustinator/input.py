@@ -44,3 +44,6 @@ class Input:
     def get_append_strategy(self):
         return self.data['append-strategy']
     
+    def get_dimensions(self):
+        return self.data['dimensions']
+    

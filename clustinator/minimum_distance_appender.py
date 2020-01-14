@@ -5,6 +5,7 @@
 import numpy as np
 import time
 from datetime import datetime
+from sklearn.decomposition import TruncatedSVD
 
 from session_appender import SessionAppender
 
@@ -12,18 +13,24 @@ class MinimumDistanceAppender(SessionAppender):
     
     cluster_mapping = None
     
-    def __init__(self, prev_behavior_models, label_encoder):
+    def __init__(self, prev_behavior_models, label_encoder, dimensions=None):
+        self.dimensions = dimensions
+        
         # Only using latest behavior model (assumes latest-first ordering)
         if prev_behavior_models:
             self.prev_markov_chains = prev_behavior_models[0].as_1d_dict(label_encoder)
             self.num_sessions = prev_behavior_models[0].get_num_sessions()
         
-    def _classify(self, session):
+    def _classify(self, session, svd=None):
         distances = []
         mc_ids = []
         
         for mid, mean_chain in self.prev_markov_chains.items():
-            dist = np.linalg.norm(session - mean_chain)
+            if svd:
+                dist = np.linalg.norm(session - svd.transform([mean_chain])[0])
+            else:
+                dist = np.linalg.norm(session - mean_chain)
+            
             distances.append(dist)
             mc_ids.append(mid)
         
@@ -41,12 +48,22 @@ class MinimumDistanceAppender(SessionAppender):
         return [ x / total_num_sessions for x in absolute ]
     
     def append(self, csr_matrix):
+        if self.dimensions:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Reducing the sessions to', self.dimensions, 'dimensions...')
+            svd = TruncatedSVD(n_components=self.dimensions)
+            reduced_matrix = svd.fit_transform(csr_matrix)
+        else:
+            svd = None
+            reduced_matrix = csr_matrix
+        
         labels = []
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Classifying the new sessions by minimum distance...')
         
-        for row in csr_matrix:
-            labels.append(self._classify(row.toarray()[0]))
+        for row in reduced_matrix:
+            if not svd:
+                row = row.toarray()[0]
+            labels.append(self._classify(row, svd))
         
         self.labels = np.array(labels)
         

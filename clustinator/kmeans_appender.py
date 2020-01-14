@@ -3,6 +3,7 @@
 '''
 
 from sklearn.cluster import KMeans
+from sklearn.decomposition import TruncatedSVD
 import numpy as np
 import time
 from datetime import datetime
@@ -12,9 +13,10 @@ from session_appender import SessionAppender
 
 class KmeansAppender(SessionAppender):
     
-    def __init__(self, k, n_jobs, prev_behavior_models):
+    def __init__(self, prev_behavior_models, k, n_jobs=1, dimensions=None):
         self.k = k
         self.n_jobs = n_jobs
+        self.dimensions = dimensions
         
         if prev_behavior_models:
             self._do_remap = True
@@ -22,8 +24,15 @@ class KmeansAppender(SessionAppender):
             self._do_remap = False
     
     def _do_clustering(self, csr_matrix):
+        if self.dimensions:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Reducing the sessions to', self.dimensions, 'dimensions...')
+            reduced_matrix = TruncatedSVD(n_components=self.dimensions).fit_transform(csr_matrix)
+        else:
+            reduced_matrix = csr_matrix
+        
+        
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Starting the clustering with k =', self.k, 'and n_jobs =', self.n_jobs, '...')
-        labels = KMeans(n_clusters=self.k, n_jobs=self.n_jobs).fit(csr_matrix).labels_
+        labels = KMeans(n_clusters=self.k, n_jobs=self.n_jobs).fit(reduced_matrix).labels_
         unique, counts = np.unique(labels, return_counts=True)
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering done. Found the following clusters:', unique, 'with counts:', counts)
         
