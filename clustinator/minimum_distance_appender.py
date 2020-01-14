@@ -31,12 +31,14 @@ class MinimumDistanceAppender(SessionAppender):
     
     def _recalculate_mean(self, mid, new_mean, new_num_sessions):
         prev_num_sessions = self.num_sessions[mid]
-        absolute = (prev_num_sessions * self.prev_markov_chains[mid]) + (new_num_sessions * new_mean)
+        weighted_prev = [ prev_num_sessions * x for x in  self.prev_markov_chains[mid]]
+        weighted_new = [ new_num_sessions * x for x in new_mean ]
+        absolute = [ sum(x) for x in zip(weighted_prev, weighted_new) ]
         
         total_num_sessions = prev_num_sessions + new_num_sessions
         self.num_sessions[mid] = total_num_sessions
         
-        return (absolute / total_num_sessions).tolist()
+        return [ x / total_num_sessions for x in absolute ]
     
     def append(self, csr_matrix):
         labels = []
