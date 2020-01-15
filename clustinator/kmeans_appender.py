@@ -13,10 +13,13 @@ from session_appender import SessionAppender
 
 class KmeansAppender(SessionAppender):
     
-    def __init__(self, prev_behavior_models, k, n_jobs=1, dimensions=None):
+    def __init__(self, prev_behavior_models, k, max_iterations = None, num_seedings = None, tolerance = None, n_jobs=1, dimensions=None):
         self.k = k
         self.n_jobs = n_jobs
         self.dimensions = dimensions
+        self.max_iterations = max_iterations if max_iterations else 300
+        self.num_seedings = num_seedings if num_seedings else 10
+        self.tolerance = tolerance if tolerance else 1e-4
         
         if prev_behavior_models:
             self._do_remap = True
@@ -31,10 +34,16 @@ class KmeansAppender(SessionAppender):
             reduced_matrix = csr_matrix
         
         
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Starting the clustering with k =', self.k, 'and n_jobs =', self.n_jobs, '...')
-        labels = KMeans(n_clusters=self.k, n_jobs=self.n_jobs).fit(reduced_matrix).labels_
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Starting the clustering with k =', self.k, ' max_iter =', self.max_iterations,
+              ' n_init =', self.num_seedings, ' tol =', self.tolerance, ' n_jobs =', self.n_jobs, '...')
+        kmeans = KMeans(n_clusters=self.k, max_iter=self.max_iterations, n_init=self.num_seedings, tol=self.tolerance, n_jobs=self.n_jobs, init='k-means++').fit(reduced_matrix)
+        labels = kmeans.labels_
+        
+        if kmeans.n_iter_ >= self.max_iterations:
+            warn('The number of iterations reached the specified maximum. The centroids might not have converged!')
+        
         unique, counts = np.unique(labels, return_counts=True)
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering done. Found the following clusters:', unique, 'with counts:', counts)
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering done. Needed', kmeans.n_iter_, 'iterations and found the following clusters:', unique, 'with counts:', counts)
         
         return unique, counts, labels
     

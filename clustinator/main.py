@@ -34,7 +34,7 @@ class Main:
 
         data_input = Input(self.sessions_file)
         avg_tolerance, epsilon, min_samples = data_input.dbscan_param()
-        k, n_jobs = data_input.kmeans_param()
+        k, max_iterations, num_seedings, convergence_tolerance, n_jobs = data_input.kmeans_param()
         header = data_input.get_header()
         app_id = data_input.get_app_id()
         tailoring = data_input.get_tailoring()
@@ -44,7 +44,8 @@ class Main:
         dimensions = data_input.get_dimensions()
 
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'using', append_strategy,
-              'with the following parameters: epsilon =', epsilon, ' avg_tolerance =', avg_tolerance, ' min-sample-size =', min_samples, ' k =', k,
+              'with the following parameters: epsilon =', epsilon, ' avg_tolerance =', avg_tolerance, ' min-sample-size =', min_samples,
+              ' k =', k, ' max-iterations =', max_iterations, ' num-seedings =', num_seedings, ' convergence-tolerance =', convergence_tolerance,
               ' n_jobs =', n_jobs, ' dimensions =', dimensions)
         print('Clustering range is', start_micros, '-', interval_start_micros, '-', end_micros)
         
@@ -73,7 +74,7 @@ class Main:
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done.')
         
         appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
-                     'kmeans': KmeansAppender(prev_behavior_models, k, n_jobs, dimensions),
+                     'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions),
                      'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions)}
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending the new sessions using', append_strategy)

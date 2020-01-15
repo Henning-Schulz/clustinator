@@ -14,7 +14,7 @@ class Input:
         return self.data.get('avg-transition-tolerance'), self.data.get('epsilon'), self.data.get('min-sample-size')
     
     def kmeans_param(self):
-        return self.data.get('k'), self.data.get('parallelize')
+        return self.data.get('k'), self.data.get('max-iterations'), self.data.get('num-seedings'), self.data.get('convergence-tolerance'), self.data.get('parallelize')
 
     def get_header(self):
         header_dict = {}
