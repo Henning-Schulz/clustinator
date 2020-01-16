@@ -122,4 +122,7 @@ if __name__ == '__main__':
                    help='Set to true to do a fast test run without think time calculation. DO NOT USE IN PRODUCTION!')
     args = parser.parse_args()
     
+    if args.fast_test:
+        warn('Running in fast-test mode. Do not use this in production!')
+    
     Receiver(args.rabbitmq, args.rabbitmq_port, args.elastic, args.timeout, args.elastic_timeout, args.sessions_buffer, args.fast_test)
