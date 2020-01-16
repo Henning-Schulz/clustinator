@@ -65,16 +65,37 @@ class ThinktimeMatrix:
         else:
             return np.var(np.frombuffer(thinktimes, dtype=np.float64))
     
-    def mean_1d_dict(self):
+    def _recalculate_mean(self, new_mean, new_num_sessions, prev_mean, prev_num_sessions):
+        weighted_prev = [ prev_num_sessions * x for x in prev_mean ]
+        weighted_new = [ new_num_sessions * x for x in new_mean ]
+        absolute = [ sum(x) for x in zip(weighted_prev, weighted_new) ]
+        
+        total_num_sessions = prev_num_sessions + new_num_sessions
+        
+        return [ x / total_num_sessions for x in absolute ]
+    
+    def mean_1d_dict(self, prev_behavior_model=None, new_num_sessions=None):
         """
         Returns the mean values of the collected think times as dict of 1d arrays.
+        :param prev_behavior_model: The previous behavior model. If not None, the think time means will be merged.
+        :param new_num_sessions: The number of sessions per new cluster. Needed if prev_behavior_model is not None.
         :return: The think time means per transition.
         """
         
         result_dict = {}
         
+        if prev_behavior_model:
+            print('%s Merging the previous think time means.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
+            prev_means = prev_behavior_model.think_time_means_1d_dict(self.label_encoder)
+            prev_num_sessions = prev_behavior_model.get_num_sessions()
+        
         for beh_id, thinktimes in self._thinktimes.items():
-            result_dict[beh_id] = [ self._thinktime_mean(tt) for tt in thinktimes ]
+            new_mean = [ self._thinktime_mean(tt) for tt in thinktimes ]
+            
+            if prev_behavior_model:
+                result_dict[beh_id] = self._recalculate_mean(new_mean, new_num_sessions[beh_id], prev_means[beh_id], prev_num_sessions[beh_id])
+            else:
+                result_dict[beh_id] = new_mean
         
         return result_dict
     

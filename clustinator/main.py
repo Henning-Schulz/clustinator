@@ -96,13 +96,14 @@ class Main:
         if not self.fast_test:
             print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Calculating the think times...')
             thinktime_matrix = ThinktimeMatrix(app_id, tailoring, start_micros, end_micros, matrix.label_encoder)
-            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Think time calculation done. Returning the result...')
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Think time calculation done.')
 
         total_num_sessions = np.sum([ count for _, count in num_sessions.items() ])
         frequency = { beh_id: count / total_num_sessions for beh_id, count in num_sessions.items() }
         
         if not self.fast_test:
-            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(), thinktime_matrix.variance_1d_dict(), frequency, num_sessions).build_json()
+            last_prev_model = prev_behavior_models[0] if prev_behavior_models else None
+            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(last_prev_model, num_sessions), thinktime_matrix.variance_1d_dict(), frequency, num_sessions).build_json()
         else:
             message = Message(header, cluster_means, matrix.states().tolist(), cluster_means, cluster_means, frequency, num_sessions).build_json()
 

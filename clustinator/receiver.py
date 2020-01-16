@@ -122,6 +122,8 @@ if __name__ == '__main__':
                    help='Set to true to do a fast test run without think time calculation. DO NOT USE IN PRODUCTION!')
     args = parser.parse_args()
     
+    print(args)
+    
     if args.fast_test:
         warn('Running in fast-test mode. Do not use this in production!')
     
