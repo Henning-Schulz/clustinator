@@ -118,7 +118,7 @@ if __name__ == '__main__':
                    help='The timeout in seconds to wait for an Elasticsearch request.')
     parser.add_argument('--sessions-buffer', nargs='?', default=None,
                    help='A file path to a session matrix buffer. None means not buffering the matrices.')
-    parser.add_argument('--fast-test', nargs='?', type=bool, default=False,
+    parser.add_argument('--fast-test', default=False, action='store_true',
                    help='Set to true to do a fast test run without think time calculation. DO NOT USE IN PRODUCTION!')
     args = parser.parse_args()
     
