@@ -33,7 +33,7 @@ class ThinktimeMatrix:
             self._thinktimes[group_id] = thinktimes
         
         idx = from_idx * self._num_states + to_idx
-        thinktimes[idx].append(thinktime_micros)
+        thinktimes[idx].append(thinktime_micros / 1000) # think times are in milliseconds
     
     def _append_sessions(self, session_list):
         
@@ -74,6 +74,18 @@ class ThinktimeMatrix:
         
         return [ x / total_num_sessions for x in absolute ]
     
+    def _recalculate_variance(self, new_variance, new_num_sessions, prev_variance, prev_num_sessions):
+        prev_weight = prev_num_sessions ** 2
+        new_weight = new_num_sessions ** 2
+        
+        weighted_prev = [ prev_weight * x for x in prev_variance ]
+        weighted_new = [ new_weight * x for x in new_variance ]
+        absolute = [ sum(x) for x in zip(weighted_prev, weighted_new) ]
+        
+        total_weight = (prev_num_sessions + new_num_sessions) ** 2
+        
+        return [ x / total_weight for x in absolute ]
+    
     def mean_1d_dict(self, prev_behavior_model=None, new_num_sessions=None):
         """
         Returns the mean values of the collected think times as dict of 1d arrays.
@@ -99,7 +111,7 @@ class ThinktimeMatrix:
         
         return result_dict
     
-    def variance_1d_dict(self):
+    def variance_1d_dict(self, prev_behavior_model=None, new_num_sessions=None):
         """
         Returns the variances of the collected think times as dict of 1d arrays.
         :return: The think time variances per transition.
@@ -107,7 +119,18 @@ class ThinktimeMatrix:
         
         result_dict = {}
         
+        if prev_behavior_model:
+            print('%s Merging the previous think time variances.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
+            prev_variances = prev_behavior_model.think_time_variances_1d_dict(self.label_encoder)
+            prev_num_sessions = prev_behavior_model.get_num_sessions()
+        
         for beh_id, thinktimes in self._thinktimes.items():
-            result_dict[beh_id] = [ self._thinktime_variance(tt) for tt in thinktimes ]
+            new_variance = [ self._thinktime_variance(tt) for tt in thinktimes ]
+            
+            if prev_behavior_model:
+                result_dict[beh_id] = self._recalculate_variance(new_variance, new_num_sessions[beh_id], prev_variances[beh_id], prev_num_sessions[beh_id])
+            else:
+                result_dict[beh_id] = new_variance
         
         return result_dict
+    

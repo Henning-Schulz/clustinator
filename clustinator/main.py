@@ -103,7 +103,9 @@ class Main:
         
         if not self.fast_test:
             last_prev_model = prev_behavior_models[0] if prev_behavior_models else None
-            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_matrix.mean_1d_dict(last_prev_model, num_sessions), thinktime_matrix.variance_1d_dict(), frequency, num_sessions).build_json()
+            thinktime_means = thinktime_matrix.mean_1d_dict(last_prev_model, num_sessions)
+            thinktime_variances = thinktime_matrix.variance_1d_dict(last_prev_model, num_sessions)
+            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_means, thinktime_variances, frequency, num_sessions).build_json()
         else:
             message = Message(header, cluster_means, matrix.states().tolist(), cluster_means, cluster_means, frequency, num_sessions).build_json()
 

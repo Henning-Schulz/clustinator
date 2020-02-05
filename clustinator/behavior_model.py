@@ -81,16 +81,30 @@ class BehaviorModel:
         
         for from_state in transitions.keys():
             for to_state in transitions[from_state].keys():
-                prob = transitions[from_state][to_state]['thinkTime']['mean']
+                mean = transitions[from_state][to_state]['thinkTime']['mean']
                 from_idx = label_encoder.transform([from_state])[0]
                 to_idx = label_encoder.transform([to_state])[0]
-                array[from_idx * num_states + to_idx] = prob
+                array[from_idx * num_states + to_idx] = mean
+        
+        return array
+    
+    def _load_think_time_variance(self, json, label_encoder):
+        num_states = len(label_encoder.classes_)
+        transitions = json['transitions']
+        array = [0] * (num_states ** 2)
+        
+        for from_state in transitions.keys():
+            for to_state in transitions[from_state].keys():
+                var = transitions[from_state][to_state]['thinkTime']['variance']
+                from_idx = label_encoder.transform([from_state])[0]
+                to_idx = label_encoder.transform([to_state])[0]
+                array[from_idx * num_states + to_idx] = var
         
         return array
     
     def think_time_means_1d_dict(self, label_encoder):
         """
-        Returns the think times of the loaded behavior model as a dict of 1d arrays, one per Markov chain.
+        Returns the think time means of the loaded behavior model as a dict of 1d arrays, one per Markov chain.
         The order of the Markov states corresponds to the label encoder.
         The keys are the Markov chain IDs (string).
         :param label_encoder: Label encoder to use for getting the index per state.
@@ -104,6 +118,26 @@ class BehaviorModel:
             
         for markov_chain in self.json['markov-chains']:
             array_1d = self._load_think_time_mean(markov_chain, label_encoder)
+            dict_1d[markov_chain['id']] = array_1d
+        
+        return dict_1d
+    
+    def think_time_variances_1d_dict(self, label_encoder):
+        """
+        Returns the think time variances of the loaded behavior model as a dict of 1d arrays, one per Markov chain.
+        The order of the Markov states corresponds to the label encoder.
+        The keys are the Markov chain IDs (string).
+        :param label_encoder: Label encoder to use for getting the index per state.
+        :return: A dict { 'markov chain id' -> [1d array (list)] }
+        """
+        
+        if self.json is None:
+            return None
+        
+        dict_1d = dict()
+            
+        for markov_chain in self.json['markov-chains']:
+            array_1d = self._load_think_time_variance(markov_chain, label_encoder)
             dict_1d[markov_chain['id']] = array_1d
         
         return dict_1d
