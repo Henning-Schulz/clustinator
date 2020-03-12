@@ -30,9 +30,9 @@ class SessionMatrix:
         
         self._tmp_matrix = [[0] * self.num_states for _ in range(self.num_states)]
 
-    def _populate_markov_chain(self, session):
+    def _populate_transition_matrix(self, session):
         """
-        Compute a Markov chain from the session and populates the internal transition matrix.
+        Populates the internal transition matrix with the count per transition from a single session.
         :param session: The session (list of endpoints) to be transformed to an array.
         """
         
@@ -48,24 +48,17 @@ class SessionMatrix:
 
         for (i, j) in zip(session__indices, session__indices[1:]):
             self._tmp_matrix[i][j] += 1
-
-        for row in self._tmp_matrix:
-            s = sum(row)
-            if s > 0:
-                for j in range(self.num_states):
-                    row[j] = row[j] / s
-        
         
         self._tmp_matrix[self._final_index][self._final_index] = 1
     
     def _col_index(self, from_idx, to_idx):
         return from_idx * self.num_states + to_idx
     
-    def _add_transition(self, from_idx, to_idx, prob):
-        if prob > 0:
+    def _add_transition(self, from_idx, to_idx, transition_count):
+        if transition_count > 0:
             col = self._col_index(from_idx, to_idx)
             
-            self._data.append(prob)
+            self._data.append(transition_count)
             self._indices.append(col)
             self._num_added += 1
     
@@ -73,7 +66,7 @@ class SessionMatrix:
         self._indptr.append(self._num_added)
     
     def _append_session(self, session):
-        self._populate_markov_chain(session)
+        self._populate_transition_matrix(session)
         
         for row in range(self.num_states):
             for col in range(self.num_states):

@@ -47,7 +47,7 @@ class BehaviorModel:
         
         for from_state in transitions.keys():
             for to_state in transitions[from_state].keys():
-                prob = transitions[from_state][to_state]['probability']
+                prob = transitions[from_state][to_state]['count']
                 from_idx = label_encoder.transform([from_state])[0]
                 to_idx = label_encoder.transform([to_state])[0]
                 array[from_idx * num_states + to_idx] = prob
