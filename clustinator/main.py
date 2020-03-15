@@ -42,11 +42,12 @@ class Main:
         lookback = data_input.get_lookback()
         append_strategy = data_input.get_append_strategy()
         dimensions = data_input.get_dimensions()
+        quantile_range = data_input.get_quantile_range()
 
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'using', append_strategy,
               'with the following parameters: epsilon =', epsilon, ' avg_tolerance =', avg_tolerance, ' min-sample-size =', min_samples,
               ' k =', k, ' max-iterations =', max_iterations, ' num-seedings =', num_seedings, ' convergence-tolerance =', convergence_tolerance,
-              ' n_jobs =', n_jobs, ' dimensions =', dimensions)
+              'quantile-range =', quantile_range, ' n_jobs =', n_jobs, ' dimensions =', dimensions)
         print('Clustering range is', start_micros, '-', interval_start_micros, '-', end_micros)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
@@ -74,7 +75,7 @@ class Main:
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done.')
         
         appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
-                     'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions),
+                     'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions, quantile_range),
                      'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions)}
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending the new sessions using', append_strategy)
@@ -85,6 +86,7 @@ class Main:
         labels = appender.labels
         cluster_mapping = appender.cluster_mapping
         num_sessions = appender.num_sessions
+        radiuses = appender.cluster_radiuses
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending done. Grouping the session IDs...')
             
@@ -105,9 +107,9 @@ class Main:
             last_prev_model = prev_behavior_models[0] if prev_behavior_models else None
             thinktime_means = thinktime_matrix.mean_1d_dict(last_prev_model, num_sessions)
             thinktime_variances = thinktime_matrix.variance_1d_dict(last_prev_model, num_sessions)
-            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_means, thinktime_variances, frequency, num_sessions).build_json()
+            message = Message(header, cluster_means, matrix.states().tolist(), thinktime_means, thinktime_variances, frequency, num_sessions, radiuses).build_json()
         else:
-            message = Message(header, cluster_means, matrix.states().tolist(), cluster_means, cluster_means, frequency, num_sessions).build_json()
+            message = Message(header, cluster_means, matrix.states().tolist(), cluster_means, cluster_means, frequency, num_sessions, radiuses).build_json()
 
         Producer(app_id, self.rabbitmq_host, self.rabbitmq_port).send_clustering(message)
 

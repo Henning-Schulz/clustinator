@@ -48,3 +48,6 @@ class Input:
     def get_dimensions(self):
         return self.data.get('dimensions')
     
+    def get_quantile_range(self):
+        return self.data.get('quantile-range')
+    

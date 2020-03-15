@@ -3,6 +3,7 @@
 '''
 
 from elastic_connection import ElasticBehaviorConnection
+import math
 
 class BehaviorModel:
     
@@ -141,3 +142,16 @@ class BehaviorModel:
             dict_1d[markov_chain['id']] = array_1d
         
         return dict_1d
+    
+    def radiuses(self):
+        """
+        Returns the radiuses per behavior model as dict of numbers.
+        :return: A dict { 'markov chain id' -> radius }
+        """
+        
+        radius_dict = {}
+        
+        for markov_chain in self.json['markov-chains']:
+            radius_dict[markov_chain['id']] = markov_chain.get('radius', math.inf)
+            
+        return radius_dict

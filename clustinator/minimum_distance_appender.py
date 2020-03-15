@@ -19,6 +19,7 @@ class MinimumDistanceAppender(SessionAppender):
         # Only using latest behavior model (assumes latest-first ordering)
         if prev_behavior_models:
             self.prev_markov_chains = prev_behavior_models[0].as_1d_dict(label_encoder)
+            self.prev_radiuses = prev_behavior_models[0].radiuses()
             self.num_sessions = prev_behavior_models[0].get_num_sessions()
     
     def _recalculate_mean(self, mid, new_mean, new_num_sessions):
@@ -72,5 +73,11 @@ class MinimumDistanceAppender(SessionAppender):
         
         self.cluster_means = { mid: self._recalculate_mean(mid, new_mean, num_sessions[mid]) for mid, new_mean in new_cluster_means.items() }
         
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation and appending done.')
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation done.')
+        
+        print("Calculating the cluster radiuses...")
+        new_cluster_radiuses = self._calculate_cluster_radiuses(csr_matrix, self.labels, self.cluster_means)
+        
+        self.cluster_radiuses = { mid: max(new_cluster_radiuses[mid], self.prev_radiuses[mid]) }
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation and appending done. Found the following radiuses:', self.cluster_radiuses)
         

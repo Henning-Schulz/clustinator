@@ -19,7 +19,7 @@ class NpEncoder(json.JSONEncoder):
 
 class Message:
 
-    def __init__(self, header, cluster_mean, states, think_time_means, think_time_variances, frequency, num_sessions):
+    def __init__(self, header, cluster_mean, states, think_time_means, think_time_variances, frequency, num_sessions, radiuses):
         self.header = header
         self.cluster_mean = cluster_mean
         self.states = states
@@ -27,6 +27,7 @@ class Message:
         self.think_time_variances = think_time_variances
         self.frequency = frequency
         self.num_sessions = num_sessions
+        self.radiuses = radiuses
 
     def build_json(self):
         """
@@ -39,5 +40,6 @@ class Message:
         self.header['think-time-variances'] = self.think_time_variances
         self.header['frequency'] = self.frequency
         self.header['num-sessions'] = self.num_sessions
+        self.header['radiuses'] = self.radiuses
 
         return json.dumps(self.header, cls=NpEncoder)
