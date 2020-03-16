@@ -43,11 +43,12 @@ class Main:
         append_strategy = data_input.get_append_strategy()
         dimensions = data_input.get_dimensions()
         quantile_range = data_input.get_quantile_range()
+        radius_factor = data_input.get_radius_factor()
 
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering for app-id', app_id, 'using', append_strategy,
               'with the following parameters: epsilon =', epsilon, ' avg_tolerance =', avg_tolerance, ' min-sample-size =', min_samples,
               ' k =', k, ' max-iterations =', max_iterations, ' num-seedings =', num_seedings, ' convergence-tolerance =', convergence_tolerance,
-              'quantile-range =', quantile_range, ' n_jobs =', n_jobs, ' dimensions =', dimensions)
+              'quantile-range =', quantile_range, 'radius-factor =', radius_factor, ' n_jobs =', n_jobs, ' dimensions =', dimensions)
         print('Clustering range is', start_micros, '-', interval_start_micros, '-', end_micros)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Loading previous Markov chains...')
@@ -76,7 +77,7 @@ class Main:
         
         appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
                      'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions, quantile_range),
-                     'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions)}
+                     'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions, radius_factor, num_seedings, min_samples)}
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending the new sessions using', append_strategy)
         

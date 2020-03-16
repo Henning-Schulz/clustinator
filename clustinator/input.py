@@ -51,3 +51,6 @@ class Input:
     def get_quantile_range(self):
         return self.data.get('quantile-range')
     
+    def get_radius_factor(self):
+        return self.data.get('radius-factor')
+    
