@@ -38,14 +38,18 @@ class KmeansAppender(SessionAppender):
         labels = np.full(csr_matrix.shape[0], -1)
         indices = np.arange(csr_matrix.shape[0])
         
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Checking for outliers with quantile range', self.quantile_range, '...')
-        
-        neigh = NearestNeighbors(n_neighbors=2)
-        neigh.fit(reduced_matrix)
-        distances, _ = neigh.kneighbors(reduced_matrix)
-        q_lower, q_higher = np.quantile(distances[:,1], [0.5 - self.quantile_range/2, 0.5 + self.quantile_range/2])
-        
-        non_outlier = distances[:,1] <= q_higher + 1.5 * (q_higher - q_lower)
+        if self.quantile_range < 1:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Checking for outliers with quantile range', self.quantile_range, '...')
+            
+            neigh = NearestNeighbors(n_neighbors=2)
+            neigh.fit(reduced_matrix)
+            distances, _ = neigh.kneighbors(reduced_matrix)
+            q_lower, q_higher = np.quantile(distances[:,1], [0.5 - self.quantile_range/2, 0.5 + self.quantile_range/2])
+            
+            non_outlier = distances[:,1] <= q_higher + 1.5 * (q_higher - q_lower)
+        else:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Skipping outlier removal - quantile range is 1.')
+            non_outlier = np.full(csr_matrix.shape[0], True)
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Removing', csr_matrix.shape[0] - np.count_nonzero(non_outlier),
               'outliers based on q[', 0.5 - self.quantile_range/2, '] =', q_lower, 'and q[', 0.5 + self.quantile_range/2, '] =', q_higher)

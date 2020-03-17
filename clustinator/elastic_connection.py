@@ -5,13 +5,17 @@
 import time
 from datetime import datetime
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionTimeout
+from time import sleep
 
 class ElasticConnection:
     
     _es = None
+    _timeout = None
     
     @staticmethod
     def init(host, timeout=10):
+        ElasticConnection._timeout = timeout
         ElasticConnection._es = Elasticsearch(host, timeout=timeout)
 
 
@@ -131,23 +135,32 @@ class ElasticSessionConnection(ElasticConnection):
         
         print('%s Updating the group-id %r of the sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), group_id, self.index))
         
-        response = ElasticConnection._es.update_by_query(
-            index = self.index,
-            conflicts = 'proceed',
-            wait_for_completion = True,
-            refresh = True,
-            body = {
-                "script": {
-                    "source": "ctx._source.put(\"group-id\", params.group_id)",
-                    "lang": "painless",
-                    "params": { "group_id": group_id }
-                },
-                "query": {
-                    "ids": { "values": session_ids }
-                }
-            }
-        )
+        response = None
+        retry_pause = ElasticConnection._timeout * 2
         
+        while not response:
+            try:    
+                response = ElasticConnection._es.update_by_query(
+                    index = self.index,
+                    conflicts = 'proceed',
+                    wait_for_completion = True,
+                    refresh = True,
+                    body = {
+                        "script": {
+                            "source": "ctx._source.put(\"group-id\", params.group_id)",
+                            "lang": "painless",
+                            "params": { "group_id": group_id }
+                        },
+                        "query": {
+                            "ids": { "values": session_ids }
+                        }
+                    }
+                )
+            except (ConnectionTimeout, ConnectionError) as e:
+                print('%s WARN Failed updating the group-id %r of the sessions in %r - %r. Retrying after %r seconds.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), group_id, self.index, str(e), retry_pause))
+                sleep(retry_pause)
+                retry_pause = retry_pause * 2
+            
         print('%s Updated the group-id of %i sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), response['total'], self.index))
         
         if len(response['failures']) > 0:
