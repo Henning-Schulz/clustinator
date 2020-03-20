@@ -58,7 +58,7 @@ class MinimumDistanceAppender(SessionAppender):
         
         return new_indices
     
-    def _cluster_remainder(self, reduced_matrix, indices_unassigned, labels):
+    def _cluster_remainder(self, reduced_matrix, indices_unassigned, labels, prev_labels):
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Checking whether to group the remaining sessions into a new cluster...')
         
         max_radius = max([r for (mid, r) in self.prev_radiuses.items() if mid != '-1']) * self.radius_factor
@@ -71,7 +71,7 @@ class MinimumDistanceAppender(SessionAppender):
                 largest_cluster = new_cluster
         
         if len(largest_cluster) >= self.min_samples:
-            new_label = str(max([ int(s) if s.isdigit() else 0 for s in labels ]) + 1)
+            new_label = str(max([ int(s) if s.isdigit() else 0 for s in prev_labels ]) + 1)
             labels[largest_cluster] = new_label
             
             print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Found', len(largest_cluster), 'sessions fitting into one cluster. Assigning them to label', new_label)
@@ -125,7 +125,7 @@ class MinimumDistanceAppender(SessionAppender):
             else:
                 indices_unassigned.append(i)
         
-        self._cluster_remainder(reduced_matrix, indices_unassigned, labels)
+        self._cluster_remainder(reduced_matrix, indices_unassigned, labels, unique_labels)
         
         unique, counts = np.unique(labels, return_counts = True)
         
@@ -144,10 +144,20 @@ class MinimumDistanceAppender(SessionAppender):
         new_cluster_means = self._calculate_cluster_means(csr_matrix, self.labels)
         self.cluster_means = { mid: self._recalculate_mean(mid, new_mean, num_sessions[mid]) for mid, new_mean in new_cluster_means.items() }
         
+        for (old_mid, old_mean) in self.prev_markov_chains.items():
+            if old_mid not in self.cluster_means:
+                self.cluster_means[old_mid] = old_mean
+                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old cluster mean of group', old_mid, 'as no new session belongs to it.')
+        
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Mean calculation done.')
         
         print("Calculating the cluster radiuses...")
         new_cluster_radiuses = self._calculate_cluster_radiuses(csr_matrix, self.labels, self.cluster_means)
+        
+        for (old_mid, old_radius) in self.prev_radiuses.items():
+            if old_mid not in new_cluster_radiuses:
+                new_cluster_radiuses[old_mid] = old_radius
+                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old cluster radius of group', old_mid, 'as no new session belongs to it.')
         
         self.cluster_radiuses = { mid: max(new_radius, self.prev_radiuses.get(mid, 0)) for mid, new_radius in new_cluster_radiuses.items() }
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation and appending done. Found the following radiuses:', self.cluster_radiuses)
