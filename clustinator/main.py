@@ -75,14 +75,28 @@ class Main:
         csr_matrix = matrix.as_csr_matrix()
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Matrix creation done.')
         
-        appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
-                     'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions, quantile_range),
-                     'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions, radius_factor, num_seedings, min_samples)}
-        
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Appending the new sessions using', append_strategy)
         
-        appender = appenders[append_strategy]
-        appender.append(csr_matrix)
+        appender = self.matrix_buffer.load_appender(app_id, tailoring, start_micros, end_micros, append_strategy,
+                         avg_tolerance, epsilon, min_samples, k, max_iterations, num_seedings, convergence_tolerance,
+                         dimensions, quantile_range, radius_factor)
+        
+        if appender:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Reusing the buffered session appender.')
+        else:
+            print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Creating and executing a new appender...')
+        
+            appenders = {'dbscan': DbscanAppender(epsilon, avg_tolerance, matrix.states(), min_samples, prev_behavior_models, matrix.label_encoder),
+                         'kmeans': KmeansAppender(prev_behavior_models, k, max_iterations, num_seedings, convergence_tolerance, n_jobs, dimensions, quantile_range),
+                         'minimum-distance': MinimumDistanceAppender(prev_behavior_models, matrix.label_encoder, dimensions, radius_factor, num_seedings, min_samples)}
+            
+            appender = appenders[append_strategy]
+            appender.append(csr_matrix)
+            
+            self.matrix_buffer.store_appender(app_id, tailoring, start_micros, end_micros, append_strategy,
+                         avg_tolerance, epsilon, min_samples, k, max_iterations, num_seedings, convergence_tolerance,
+                         dimensions, quantile_range, radius_factor, appender)
+        
         cluster_means = appender.cluster_means
         labels = appender.labels
         cluster_mapping = appender.cluster_mapping
