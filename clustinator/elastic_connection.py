@@ -6,16 +6,19 @@ import time
 from datetime import datetime
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionTimeout
+import requests
 from time import sleep
 
 class ElasticConnection:
     
     _es = None
+    _host = None
     _timeout = None
     
     @staticmethod
     def init(host, timeout=10):
         ElasticConnection._timeout = timeout
+        ElasticConnection._host = host
         ElasticConnection._es = Elasticsearch(host, timeout=timeout)
 
 
@@ -136,14 +139,13 @@ class ElasticSessionConnection(ElasticConnection):
         print('%s Updating the group-id %r of the sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), group_id, self.index))
         
         response = None
-        retry_pause = ElasticConnection._timeout * 2
         
         while not response:
-            try:    
+            try:
                 response = ElasticConnection._es.update_by_query(
                     index = self.index,
                     conflicts = 'proceed',
-                    wait_for_completion = True,
+                    wait_for_completion = False,
                     refresh = True,
                     body = {
                         "script": {
@@ -157,14 +159,28 @@ class ElasticSessionConnection(ElasticConnection):
                     }
                 )
             except (ConnectionTimeout, ConnectionError) as e:
-                print('%s WARN Failed updating the group-id %r of the sessions in %r - %r. Retrying after %r seconds.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), group_id, self.index, str(e), retry_pause))
-                sleep(retry_pause)
-                retry_pause = retry_pause * 2
-            
-        print('%s Updated the group-id of %i sessions in %r...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), response['total'], self.index))
+                print('%s WARN Update by query request failed! %r. Retrying after %r seconds...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(e), ElasticConnection._timeout))
+                sleep(ElasticConnection._timeout)
         
-        if len(response['failures']) > 0:
-            print('WARNING: Had the following failures: ', response['failures'])
+        task_id = response['task']
+        
+        print('%s Got the task ID %r.' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), task_id))
+        
+        completed = False
+        
+        while not completed:
+            print('%s Waiting (another) %r seconds for completion...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), ElasticConnection._timeout))
+            
+            try:
+                task_response = ElasticConnection._es.tasks.get(task_id=task_id, timeout=str(ElasticConnection._timeout) + 's', wait_for_completion=True)
+                completed = task_response['completed']
+            except (ConnectionTimeout, ConnectionError) as e:
+                print('%s WARN Wait request failed! %r. Retrying...' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), str(e)))
+                completed = False
+        
+        print('%s Task %r completed! Updated %i of %i sessions' % (datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), task_id, task_response['task']['status']['updated'], task_response['task']['status']['total']))
+        
+        requests.delete('http://' + ElasticConnection._host + ':9200/.tasks/task/' + task_id)
 
 
 class ElasticBehaviorConnection(ElasticConnection):
