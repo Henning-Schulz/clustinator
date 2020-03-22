@@ -109,10 +109,11 @@ class ThinktimeMatrix:
             else:
                 result_dict[beh_id] = new_mean
         
-        for (old_mid, old_mean) in prev_means.items():
-            if old_mid not in result_dict:
-                result_dict[old_mid] = old_mean
-                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old think time mean of group', old_mid, 'as no new session belongs to it.')
+        if prev_behavior_model:
+            for (old_mid, old_mean) in prev_means.items():
+                if old_mid not in result_dict:
+                    result_dict[old_mid] = old_mean
+                    print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old think time mean of group', old_mid, 'as no new session belongs to it.')
         
         return result_dict
     
@@ -137,10 +138,11 @@ class ThinktimeMatrix:
             else:
                 result_dict[beh_id] = new_variance
         
-        for (old_mid, old_variance) in prev_variances.items():
-            if old_mid not in result_dict:
-                result_dict[old_mid] = old_variance
-                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old think time variance of group', old_mid, 'as no new session belongs to it.')
+        if prev_behavior_model:
+            for (old_mid, old_variance) in prev_variances.items():
+                if old_mid not in result_dict:
+                    result_dict[old_mid] = old_variance
+                    print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old think time variance of group', old_mid, 'as no new session belongs to it.')
         
         return result_dict
     
