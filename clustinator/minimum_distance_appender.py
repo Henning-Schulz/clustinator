@@ -25,7 +25,7 @@ class MinimumDistanceAppender(SessionAppender):
         # Only using latest behavior model (assumes latest-first ordering)
         if prev_behavior_models:
             self.prev_markov_chains = prev_behavior_models[0].as_1d_dict(label_encoder)
-            self.prev_radiuses = prev_behavior_models[0].radiuses()
+            self.prev_radiuses = prev_behavior_models[0].radiuses(label_encoder)
             self.num_sessions = prev_behavior_models[0].get_num_sessions()
     
     def to_array(self, potential_sparse_array):
@@ -61,7 +61,7 @@ class MinimumDistanceAppender(SessionAppender):
     def _cluster_remainder(self, reduced_matrix, indices_unassigned, labels, prev_labels):
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Checking whether to group the remaining sessions into a new cluster...')
         
-        max_radius = max([r for (mid, r) in self.prev_radiuses.items() if mid != '-1']) * self.radius_factor
+        max_radius = np.amax([r for (mid, r) in self.prev_radiuses.items() if mid != '-1']) * self.radius_factor
         largest_cluster = []
         
         for _ in range(self.num_seedings):
@@ -84,7 +84,7 @@ class MinimumDistanceAppender(SessionAppender):
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Clustering of the remaining sessions done.', len(noise_indices), 'sessions have been identified as noise.')
     
-    def _assign_sessions(self, csr_matrix):
+    def _assign_sessions(self, csr_matrix, absolute=np.absolute):
         if self.dimensions:
             print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Reducing the sessions to', self.dimensions, 'dimensions...')
             svd = TruncatedSVD(n_components=self.dimensions)
@@ -115,8 +115,9 @@ class MinimumDistanceAppender(SessionAppender):
                 row = row.toarray()[0]
                 
             for j in range(len(filtered_means)):
-                dist = np.linalg.norm(row - filtered_means[j])
-                distances[j] = dist if dist < self.radius_factor * self.prev_radiuses[unique_labels[j]] else math.inf
+                diff = row - filtered_means[j]
+                dist = np.linalg.norm(diff)
+                distances[j] = dist if np.all(diff <= self.radius_factor * absolute(self.prev_radiuses[unique_labels[j]])) else math.inf
             
             min_dist = min(distances)
             
@@ -159,6 +160,6 @@ class MinimumDistanceAppender(SessionAppender):
                 new_cluster_radiuses[old_mid] = old_radius
                 print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old cluster radius of group', old_mid, 'as no new session belongs to it.')
         
-        self.cluster_radiuses = { mid: max(new_radius, self.prev_radiuses.get(mid, 0)) for mid, new_radius in new_cluster_radiuses.items() }
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation and appending done. Found the following radiuses:', self.cluster_radiuses)
+        self.cluster_radiuses = { mid: np.maximum(new_radius, self.prev_radiuses.get(mid, new_radius)) for mid, new_radius in new_cluster_radiuses.items() }
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation and appending done.')
         

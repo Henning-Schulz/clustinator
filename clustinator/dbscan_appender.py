@@ -56,6 +56,6 @@ class DbscanAppender(SessionAppender):
         
         print("Calculating the cluster radiuses...")
         self.cluster_radiuses = self._calculate_cluster_radiuses(csr_matrix, labels, cluster_means)
-        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation done. Found the following:', self.cluster_radiuses)
+        print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation done.')
         
         self.num_sessions = { cluster_mapping[str(mid)] : count for mid, count in zip(unique, counts) }

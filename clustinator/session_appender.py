@@ -51,7 +51,7 @@ class SessionAppender:
         :param X: The sessions as (absolute) Markov chains
         :param labels: The labels per Markov chain in the same order as X
         :param cluster_means: The cluster means as returned by _calculate_cluster_means(X, labels).
-        :return: { group label (str) -> cluster radius }
+        :return: { group label (str) -> cluster radius array }
         """
         
         cluster_radius_dict = {}
@@ -60,6 +60,9 @@ class SessionAppender:
             chains_with_label = X[labels == label]
             mean_chain = cluster_means[str(label)]
             
-            cluster_radius_dict[str(label)] = max([ np.linalg.norm(chains_with_label[i].toarray() - mean_chain) for i in range(chains_with_label.shape[0]) ])
+            session_max = np.amax(chains_with_label, axis=0)
+            session_min = np.amin(chains_with_label, axis=0)
+            
+            cluster_radius_dict[str(label)] = np.maximum(abs(session_max.toarray()[0] - mean_chain), abs(session_min.toarray()[0] - mean_chain))
         
         return cluster_radius_dict
