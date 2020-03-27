@@ -146,18 +146,16 @@ class BehaviorModel:
     def _load_radius_array(self, json, label_encoder):
         num_states = len(label_encoder.classes_)
         transitions = json['transitions']
-        array = [-1] * (num_states ** 2)
+        array = [math.inf] * (num_states ** 2)
         
         for from_state in transitions.keys():
             for to_state in transitions[from_state].keys():
-                radius = transitions[from_state][to_state].get('radius', -1)
+                radius = transitions[from_state][to_state].get('radius', math.inf)
                 from_idx = label_encoder.transform([from_state])[0]
                 to_idx = label_encoder.transform([to_state])[0]
-                array[from_idx * num_states + to_idx] = radius
+                array[from_idx * num_states + to_idx] = radius if radius >= 0 else math.inf
         
-        max_radius = max(array)
-        
-        return [ -max_radius if rad < 0 else rad for rad in array ]
+        return array
     
     def radiuses(self, label_encoder):
         """
@@ -170,5 +168,18 @@ class BehaviorModel:
         for markov_chain in self.json['markov-chains']:
             array_1d = self._load_radius_array(markov_chain, label_encoder)
             radius_dict[markov_chain['id']] = array_1d
+            
+        return radius_dict
+    
+    def total_radiuses(self):
+        """
+        Returns the total radiuses per behavior model as dict of numbers.
+        :return: A dict { 'markov chain id' -> radius }
+        """
+        
+        radius_dict = {}
+        
+        for markov_chain in self.json['markov-chains']:
+            radius_dict[markov_chain['id']] = markov_chain.get('radius', math.inf)
             
         return radius_dict

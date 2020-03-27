@@ -66,3 +66,22 @@ class SessionAppender:
             cluster_radius_dict[str(label)] = np.maximum(abs(session_max.toarray()[0] - mean_chain), abs(session_min.toarray()[0] - mean_chain))
         
         return cluster_radius_dict
+    
+    def _calculate_total_cluster_radiuses(self, X, labels, cluster_means):
+        """
+        Returns the total radius of each cluster (maximum distance of a session to the cluster mean).
+        :param X: The sessions as (absolute) Markov chains
+        :param labels: The labels per Markov chain in the same order as X
+        :param cluster_means: The cluster means as returned by _calculate_cluster_means(X, labels).
+        :return: { group label (str) -> cluster radius }
+        """
+        
+        cluster_radius_dict = {}
+        
+        for label in np.unique(labels):
+            chains_with_label = X[labels == label]
+            mean_chain = cluster_means[str(label)]
+            
+            cluster_radius_dict[str(label)] = max([ np.linalg.norm(chains_with_label[i].toarray() - mean_chain) for i in range(chains_with_label.shape[0]) ])
+        
+        return cluster_radius_dict
