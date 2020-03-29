@@ -25,8 +25,8 @@ class MinimumDistanceAppender(SessionAppender):
         # Only using latest behavior model (assumes latest-first ordering)
         if prev_behavior_models:
             self.prev_markov_chains = prev_behavior_models[0].as_1d_dict(label_encoder)
-            self.prev_radiuses = prev_behavior_models[0].radiuses(label_encoder)
-            self.prev_total_radiuses = prev_behavior_models[0].total_radiuses()
+            self.cluster_radiuses = prev_behavior_models[0].radiuses(label_encoder)
+            self.total_cluster_radiuses = prev_behavior_models[0].total_radiuses()
             self.num_sessions = prev_behavior_models[0].get_num_sessions()
     
     def to_array(self, potential_sparse_array):
@@ -62,7 +62,7 @@ class MinimumDistanceAppender(SessionAppender):
     def _cluster_remainder(self, reduced_matrix, indices_unassigned, labels, prev_labels):
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Checking whether to group the remaining sessions into a new cluster...')
         
-        max_radius = max([r for (mid, r) in self.prev_total_radiuses.items() if mid != '-1']) * self.radius_factor
+        max_radius = max([r for (mid, r) in self.total_cluster_radiuses.items() if mid != '-1']) * self.radius_factor
         largest_cluster = []
         
         for _ in range(self.num_seedings):
@@ -119,8 +119,8 @@ class MinimumDistanceAppender(SessionAppender):
                 diff = row - filtered_means[j]
                 dist = np.linalg.norm(diff)
                 
-                is_in_radius = np.all(diff <= self.radius_factor * absolute(self.prev_radiuses[unique_labels[j]]))
-                is_in_total_radius = (dist <= self.radius_factor * self.prev_total_radiuses[unique_labels[j]])
+                is_in_radius = np.all(diff <= self.radius_factor * absolute(self.cluster_radiuses[unique_labels[j]]))
+                is_in_total_radius = (dist <= self.radius_factor * self.total_cluster_radiuses[unique_labels[j]])
                 
                 distances[j] = dist if (is_in_radius and is_in_total_radius) else math.inf
             
@@ -160,17 +160,19 @@ class MinimumDistanceAppender(SessionAppender):
         print("Calculating the cluster radiuses...")
         new_cluster_radiuses = self._calculate_cluster_radiuses(csr_matrix, self.labels, self.cluster_means)
         
-        for (old_mid, old_radius) in self.prev_radiuses.items():
-            if old_mid not in new_cluster_radiuses:
-                new_cluster_radiuses[old_mid] = old_radius
-                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old cluster radius of group', old_mid, 'as no new session belongs to it.')
-        
-        self.cluster_radiuses = { mid: np.maximum(new_radius, self.prev_radiuses.get(mid, new_radius)) for mid, new_radius in new_cluster_radiuses.items() }
+        for (new_mid, new_radius) in new_cluster_radiuses.items():
+            if new_mid not in self.cluster_radiuses:
+                self.cluster_radiuses[new_mid] = new_radius
+                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added new cluster radius of group', new_mid, '.')
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation done. Calculating total radiuses...')
         
         new_total_cluster_radiuses = self._calculate_total_cluster_radiuses(csr_matrix, self.labels, self.cluster_means)
-        self.total_cluster_radiuses = { mid: max(new_radius, self.prev_total_radiuses.get(mid, 0)) for mid, new_radius in new_total_cluster_radiuses.items() }
+        
+        for (new_mid, new_radius) in new_total_cluster_radiuses.items():
+            if new_mid not in self.total_cluster_radiuses:
+                self.total_cluster_radiuses[new_mid] = new_radius
+                print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Added old total cluster radius of group', new_mid, '.')
         
         print(datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), 'Radius calculation and appending done. Found the following total radiuses:', self.total_cluster_radiuses)
         
